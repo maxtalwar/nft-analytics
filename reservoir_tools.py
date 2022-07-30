@@ -1,23 +1,39 @@
 import requests, json
 from collections import OrderedDict
 
-def get_open_asks(contract):
-    url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=true&limit=999"
+def get_api_key():
+    url = "https://api.reservoir.tools/api-keys"
+
+    payload = "appName=Marketplace_Indexer&email=proton0x%40photonmail.com&website=https%3A%2F%2Fgithub.com%2F0xphoton%2FNFT-Marketplaces"
+    headers = {
+        "Accept": "*/*",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-api-key": "demo-api-key"
+    }
+
+    response = requests.post(url, data=payload, headers=headers)
+    print(response.text)
+
+    return json.loads(response.text)["key"]
+
+def get_open_asks(contract, key):
+    url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=true&limit=1000"
 
     headers = {
         "Accept": "*/*",
-        "x-api-key": "demo-api-key"
+        "x-api-key": key
     }
 
     response = json.loads(requests.get(url, headers=headers).text)["orders"]
 
     return response
 
-marketplace_asks = {}
 contract = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
+key = get_api_key()
+marketplace_asks = {}
 total = 0
 
-asks = get_open_asks(contract)
+asks = get_open_asks(contract, key)
 
 for ask in asks:
     name = ask["source"]["name"]
