@@ -37,7 +37,7 @@ asks = get_open_asks(contract, key)
 
 for ask in asks:
     name = ask["source"]["name"]
-    rounded_value = round(ask["price"], 1)
+    rounded_value = round(ask["value"], 1)
 
     if (name not in marketplace_asks.keys()):
         marketplace_asks[name] = {}
