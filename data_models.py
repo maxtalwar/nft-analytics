@@ -3,6 +3,7 @@ from sqlalchemy import ARRAY, Column, Numeric, String
 class OrderModel():
     __tablename__ = "orders"
 
+    project_name = Column(String)
     nft_id = Column(String)
     currency = Column(String)
     value = Column(Numeric)
@@ -14,6 +15,7 @@ class OrderModel():
 class TradeModel():
     __tablename__ = "trades"
 
+    project_name = Column(String)
     nft_id = Column(String)
     currency = Column(String)
     value = Column(Numeric)
