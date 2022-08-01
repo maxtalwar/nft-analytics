@@ -29,7 +29,10 @@ def get_open_asks(contract, key, continuation=None):
         "x-api-key": key
     }
 
-    response = json.loads(requests.get(url, headers=headers).text)
+    try:
+        response = json.loads(requests.get(url, headers=headers).text)
+    except:
+        print("504 Error: Gateway timeout")
 
     return {
         "orders": response["orders"], 
@@ -97,7 +100,7 @@ def get_contract_address(verbose = True):
     project_name = input("Project Name: ")
 
     try:
-        return contracts[project_name]
+        return contract_data[project_name]
     except:
         print("invalid project name")
         return get_contract_address(verbose = False)
@@ -114,14 +117,16 @@ def fill_dict(start, end):
 contract = get_contract_address()
 marketplace_name = get_input_name()
 key = get_api_key()
-marketplace_orders = fill_dict(18, 50)
+min_price = 90
+max_price = 250
+marketplace_orders = fill_dict(min_price, max_price)
 token_ids = []
 continuation = None
 
 print("fetching data... \n")
 
 # continually fetches the next page of asks and updates the marketplace orders with the next asks
-for i in range(20):
+for i in range(10):
     asks = get_open_asks(contract, key, continuation)
     orders = asks["orders"]
     continuation = asks["continuation"]
@@ -131,6 +136,8 @@ for i in range(20):
 marketplace_orders = dict(OrderedDict(sorted(marketplace_orders.items()))) # sort the orderbook by price
 
 # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
+
+print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
 for value in marketplace_orders.keys():
     print(str(marketplace_orders[value]))
