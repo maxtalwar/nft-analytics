@@ -1,6 +1,8 @@
 import requests, json
 from collections import OrderedDict
+import data
 
+# gets an API key from the reservoir.tools API
 def get_api_key():
     url = "https://api.reservoir.tools/api-keys"
 
@@ -15,6 +17,7 @@ def get_api_key():
 
     return json.loads(response.text)["key"]
 
+# gets open asks on a specific project from the reservoir API
 def get_open_asks(contract, key, continuation=None):
     url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=false&limit=100"
 
@@ -82,28 +85,21 @@ def get_input_name():
         print("invalid exchange name entered")
         return get_input_name()
 
-def get_contract_address():
-    contracts = {
-        "Cryptopunks": "0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB",
-        "Moonbirds": "0x23581767a106ae21c074b2276D25e5C3e136a68b",
-        "Otherdeed": "0x34d85c9CDeB23FA97cb08333b511ac86E1C4E258",
-        "Goblintown": "0xbCe3781ae7Ca1a5e050Bd9C4c77369867eBc307e",
-        "BAYC": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-        "MAYC": "0x60E4d786628Fea6478F785A6d7e704777c86a7c6",
-        "CloneX": "0x49cF6f5d44E70224e2E23fDcdd2C053F30aDA28B",
-        "Meebits": "0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7",
-        "Doodles": "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
-        "Azuki": "0xED5AF388653567Af2F388E6224dC7C4b3241C544",
-        "Veefriends": "0xa3AEe8BcE55BEeA1951EF834b99f3Ac60d1ABeeB"
-    }
+def get_contract_address(verbose = True):
+    contracts = data.contracts
 
-    print("Contracts")
-    for contract in contracts.keys():
-        print(contract + ": " + contracts[contract])
+    if verbose:
+        print("Contracts")
+        for contract in contracts.keys():
+            print(contract + ": " + contracts[contract])
 
     project_name = input("Project Name: ")
 
-    return contracts[project_name]
+    try:
+        return contracts[project_name]
+    except:
+        print("invalid project name")
+        return get_contract_address(verbose = False)
 
 def fill_dict(start, end):
     dictionary = {}
