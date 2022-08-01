@@ -85,6 +85,7 @@ def get_input_name():
         print("invalid exchange name entered")
         return get_input_name()
 
+# gets project contract address from project name
 def get_contract_address(verbose = True):
     contracts = data.contracts
 
@@ -101,6 +102,7 @@ def get_contract_address(verbose = True):
         print("invalid project name")
         return get_contract_address(verbose = False)
 
+# fills the marketplace orders dict with the keys for the appropriate NFT prices
 def fill_dict(start, end):
     dictionary = {}
     for i in range(start, end+1):
