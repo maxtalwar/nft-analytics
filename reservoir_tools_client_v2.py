@@ -1,8 +1,9 @@
 import requests, json
 from collections import OrderedDict
 import contracts
-from data_models import Order
+from data_models import Ask
 import table_manager
+import math
 
 # gets an API key from the reservoir.tools API
 def get_api_key():
@@ -18,6 +19,20 @@ def get_api_key():
     response = requests.post(url, data=payload, headers=headers)
 
     return json.loads(response.text)["key"]
+
+# gets the floor price for a specific project
+def get_floor_price():
+    url = f"https://api.reservoir.tools/collection/v3?id={contract}&includeTopBid=false"
+
+    headers = {
+        "Accept": "*/*",
+        "x-api-key": key
+    }
+
+    response = json.loads(requests.get(url, headers=headers).text)
+
+    return int(math.floor(response["collection"]["floorAsk"]["price"]))
+    
 
 # gets open asks on a specific project from the reservoir API
 def get_open_asks(contract, key, continuation=None):
@@ -42,7 +57,9 @@ def get_open_asks(contract, key, continuation=None):
     }
 
 def parse_nft_id(tokensetID):
-    return tokensetID.split(":", 1)[1]
+    split = tokensetID.split(":", 2)
+
+    return split[2]
 
 # returns the former marketplace orders + new ones parsed
 def parse_asks(orders):
@@ -57,9 +74,9 @@ def parse_asks(orders):
         currency = "ETH"
         price = ask["price"]
         marketplace = marketplace_name
-        order_type = "ask"
         created_at = ask["createdAt"]
         expires_on = ask["expiration"]
+        maker = ask["maker"]
 
         value = int(round(price, 0))
 
@@ -70,14 +87,14 @@ def parse_asks(orders):
             else:
                 marketplace_orders[value] = 1
 
-            order = Order(project_name, nft_id, currency, price, marketplace, order_type, created_at, expires_on)
-            detailed_orders.append(order)
+            order = Ask(project_name, nft_id, currency, price, marketplace, created_at, expires_on, maker)
+            detailed_asks.append(order)
             
             token_ids.append(ask["tokenSetId"])
 
     return {
         "price_ask_matchings": marketplace_orders,
-        "orders": detailed_orders
+        "asks": detailed_asks
     }
 
 # converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
@@ -137,11 +154,11 @@ def fill_dict(start, end):
 contract = get_contract_address()
 marketplace_name = get_input_name()
 key = get_api_key()
-min_price = 85
-max_price = 250
+min_price = get_floor_price()
+max_price = min_price*3
 total = 0
 marketplace_orders = fill_dict(min_price, max_price)
-detailed_orders = []
+detailed_asks = []
 token_ids = []
 continuation = None
 
@@ -156,7 +173,7 @@ for i in range(15):
     parsed_asks = parse_asks(orders)
 
     marketplace_orders = parsed_asks["price_ask_matchings"]
-    detailed_orders = parsed_asks["orders"]
+    detailed_asks = parsed_asks["asks"]
 
 marketplace_orders = dict(OrderedDict(sorted(marketplace_orders.items()))) # sort the orderbook by price
 
@@ -168,7 +185,7 @@ for value in marketplace_orders.keys():
     print(str(value) + ":" + str(marketplace_orders[value]))
     total += marketplace_orders[value]
 
-if total == len(detailed_orders):
+if total == len(detailed_asks):
     print("\n")
-    for detailed_order in detailed_orders:
+    for detailed_order in detailed_asks:
         table_manager.insert_orders(detailed_order)

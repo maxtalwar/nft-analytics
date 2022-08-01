@@ -1,6 +1,6 @@
 from ast import Or
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
-from data_models import OrderModel, TradeModel
+from data_models import AskModel, TradeModel
 
 def create_all_tables():
     meta.create_all(engine)
@@ -12,7 +12,7 @@ def trades():
     return trades
 
 def insert_orders(order):
-    addition = orders.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, order_type = order.order_type, created_at = order.created_at, expires_on = order.expires_on)
+    addition = orders.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
 
     connection = engine.connect()
     result = connection.execute(addition)
@@ -23,15 +23,15 @@ engine = create_engine("sqlite:///data.db", echo = False)
 meta = MetaData()
 
 orders = Table(
-    OrderModel.__tablename__, meta,
-    OrderModel.project_name,
-    OrderModel.nft_id,
-    OrderModel.currency,
-    OrderModel.value,
-    OrderModel.marketplace,
-    OrderModel.order_type,
-    OrderModel.created_at,
-    OrderModel.expires_on,
+    AskModel.__tablename__, meta,
+    AskModel.project_name,
+    AskModel.nft_id,
+    AskModel.currency,
+    AskModel.value,
+    AskModel.marketplace,
+    AskModel.created_at,
+    AskModel.expires_on,
+    AskModel.maker,
 )
 
 trades = Table(
