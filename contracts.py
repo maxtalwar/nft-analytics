@@ -1,4 +1,4 @@
-contracts = {
+contract_data = {
         "Cryptopunks": "0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB",
         "Moonbirds": "0x23581767a106ae21c074b2276D25e5C3e136a68b",
         "Otherdeed": "0x34d85c9CDeB23FA97cb08333b511ac86E1C4E258",

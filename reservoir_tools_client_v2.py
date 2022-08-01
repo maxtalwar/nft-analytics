@@ -1,6 +1,6 @@
 import requests, json
 from collections import OrderedDict
-import data
+import contracts
 
 # gets an API key from the reservoir.tools API
 def get_api_key():
@@ -87,12 +87,12 @@ def get_input_name():
 
 # gets project contract address from project name
 def get_contract_address(verbose = True):
-    contracts = data.contracts
+    contract_data = contracts.contract_data
 
     if verbose:
         print("Contracts")
-        for contract in contracts.keys():
-            print(contract + ": " + contracts[contract])
+        for contract in contract_data.keys():
+            print(contract + ": " + contract_data[contract])
 
     project_name = input("Project Name: ")
 
@@ -114,14 +114,11 @@ def fill_dict(start, end):
 contract = get_contract_address()
 marketplace_name = get_input_name()
 key = get_api_key()
-failed = 0
-min_price = 18
-max_price = 50
-marketplace_orders = fill_dict(min_price, max_price)
+marketplace_orders = fill_dict(18, 50)
 token_ids = []
 continuation = None
 
-print("fetching data...")
+print("fetching data... \n")
 
 # continually fetches the next page of asks and updates the marketplace orders with the next asks
 for i in range(20):
@@ -134,8 +131,6 @@ for i in range(20):
 marketplace_orders = dict(OrderedDict(sorted(marketplace_orders.items()))) # sort the orderbook by price
 
 # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
-
-print("\n")
 
 for value in marketplace_orders.keys():
     print(str(marketplace_orders[value]))
