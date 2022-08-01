@@ -13,7 +13,7 @@ def insert_orders(order, table):
 
     return result
 
-engine = create_engine("sqlite:///data.db", echo = False)
+engine = create_engine("sqlite:///data.db", echo = True)
 meta = MetaData()
 
 asks = Table(
@@ -53,4 +53,4 @@ trades = Table(
     TradeModel.seller,
 )
 
-create_all_tables()
+meta.create_all(engine)
