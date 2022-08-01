@@ -12,6 +12,19 @@ class AskModel():
     expires_on = Column('expires_on', String)
     maker = Column('maker', String)
 
+class BidModel():
+    __tablename__ = "bids"
+
+    project_name = Column('project_name', String)
+    nft_id = Column('nft_id', String)
+    currency = Column('currency', String)
+    value = Column('value', Numeric)
+    marketplace = Column('marketplace', String)
+    created_at = Column('created_at', String)
+    expires_on = Column('expires_on', String)
+    maker = Column('maker', String)
+    bid_type = Column("bid_type", String)
+
 class TradeModel():
     __tablename__ = "trades"
 

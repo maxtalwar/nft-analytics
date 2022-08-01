@@ -188,4 +188,4 @@ for value in marketplace_orders.keys():
 if total == len(detailed_asks):
     print("\n")
     for detailed_order in detailed_asks:
-        table_manager.insert_orders(detailed_order)
+        table_manager.insert_orders(detailed_order, "asks")

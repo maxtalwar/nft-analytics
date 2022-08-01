@@ -1,18 +1,12 @@
 from ast import Or
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
-from data_models import AskModel, TradeModel
+from data_models import AskModel, BidModel, TradeModel
 
 def create_all_tables():
     meta.create_all(engine)
 
-def orders():
-    return orders
-
-def trades():
-    return trades
-
-def insert_orders(order):
-    addition = orders.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
+def insert_orders(order, table):
+    addition = getattr(table).insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
 
     connection = engine.connect()
     result = connection.execute(addition)
@@ -22,7 +16,7 @@ def insert_orders(order):
 engine = create_engine("sqlite:///data.db", echo = False)
 meta = MetaData()
 
-orders = Table(
+asks = Table(
     AskModel.__tablename__, meta,
     AskModel.project_name,
     AskModel.nft_id,
@@ -32,6 +26,19 @@ orders = Table(
     AskModel.created_at,
     AskModel.expires_on,
     AskModel.maker,
+)
+
+bids = Table(
+    BidModel.__tablename__, meta,
+    BidModel.project_name,
+    BidModel.nft_id,
+    BidModel.currency,
+    BidModel.value,
+    BidModel.marketplace,
+    BidModel.created_at,
+    BidModel.expires_on,
+    BidModel.maker,
+    BidModel.bid_type,
 )
 
 trades = Table(
@@ -45,3 +52,5 @@ trades = Table(
     TradeModel.buyer,
     TradeModel.seller,
 )
+
+create_all_tables()
