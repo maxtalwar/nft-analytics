@@ -1,19 +1,20 @@
 from ast import Or
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+from sqlalchemy import create_engine, Table, MetaData
 from data_models import AskModel, BidModel, TradeModel
+from typing import Union
 
-def create_all_tables():
-    meta.create_all(engine)
-
-def insert_orders(order, table):
-    addition = getattr(table).insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
+def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str):
+    if input_table == "ask":
+        addition = asks.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
+    elif input_table == "bid":
+        addition = bids.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, maker = order.maker, bid_type = order.bid_type)
+    else:
+        addition = trades.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
 
     connection = engine.connect()
-    result = connection.execute(addition)
+    connection.execute(addition)
 
-    return result
-
-engine = create_engine("sqlite:///data.db", echo = True)
+engine = create_engine("sqlite:///database.db", echo = False)
 meta = MetaData()
 
 asks = Table(
@@ -36,7 +37,6 @@ bids = Table(
     BidModel.value,
     BidModel.marketplace,
     BidModel.created_at,
-    BidModel.expires_on,
     BidModel.maker,
     BidModel.bid_type,
 )
@@ -53,4 +53,5 @@ trades = Table(
     TradeModel.seller,
 )
 
-meta.create_all(engine)
+if __name__ == '__main__':
+    meta.create_all(engine)

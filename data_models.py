@@ -48,6 +48,17 @@ class Ask:
         self.expires_on = expires_on
         self.maker = maker
 
+class Bid:
+    def __init__(self, project_name, nft_id, currency, value, marketplace, created_at, maker, bid_type):
+        self.project_name = project_name
+        self.nft_id = nft_id
+        self.currency = currency
+        self.value = value
+        self.marketplace = marketplace
+        self.created_at = created_at
+        self.maker = maker
+        self.bid_type = bid_type
+
 class Trade:
     def __init__(self, project_name, nft_id, currency, value, marketplace, trade_data, buyer, seller):
         self.project_name = project_name
