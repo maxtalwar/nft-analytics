@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, Table, MetaData
 from data_models import AskModel, BidModel, TradeModel
 from typing import Union
 
-def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str):
+def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str) -> None:
     if input_table == "ask":
         addition = asks.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
     elif input_table == "bid":

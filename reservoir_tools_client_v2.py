@@ -3,9 +3,10 @@ from collections import OrderedDict
 import contracts
 from data_models import Ask, Bid, Trade
 import table_manager, math, os
+import argparse
 
 # gets an API key from the reservoir.tools API
-def get_api_key():
+def get_api_key() -> json:
     url = "https://api.reservoir.tools/api-keys"
 
     payload = "appName=Marketplace_Indexer&email=proton0x%40photonmail.com&website=https%3A%2F%2Fgithub.com%2F0xphoton%2FNFT-Marketplaces"
@@ -20,7 +21,7 @@ def get_api_key():
     return json.loads(response.text)["key"]
 
 # gets the floor price for a specific project
-def get_floor_price():
+def get_floor_price() -> json:
     url = f"https://api.reservoir.tools/collection/v3?id={contract}&includeTopBid=false"
 
     headers = {
@@ -33,7 +34,7 @@ def get_floor_price():
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
 # gets open bids on a specific project
-def get_open_bids(contract, key, continuation=None):
+def get_open_bids(contract: str, key: str, continuation=None) -> json:
     url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
 
     if continuation != None:
@@ -56,7 +57,7 @@ def get_open_bids(contract, key, continuation=None):
     }
 
 # gets open asks on a specific project from the reservoir API
-def get_open_asks(contract, key, continuation=None):
+def get_open_asks(contract: str, key: str, continuation=None) -> json:
     url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=false&limit=100"
 
     if continuation != None:
@@ -79,13 +80,13 @@ def get_open_asks(contract, key, continuation=None):
     }
 
 # parse nft id from a longer string
-def parse_nft_id(tokensetID):
+def parse_nft_id(tokensetID: str) -> str:
     split = tokensetID.split(":", 2)
 
     return split[2]
 
 # returns the former marketplace orders + new ones parsed
-def parse_asks(orders):
+def parse_asks(orders: list) -> None:
     for ask in orders:
         try:
             marketplace = ask["source"]["name"]
@@ -114,12 +115,7 @@ def parse_asks(orders):
             
             token_ids.append(ask["tokenSetId"])
 
-    return {
-        "price_ask_matchings": marketplace_asks,
-        "asks": detailed_asks
-    }
-
-def parse_bids(bids):
+def parse_bids(bids: list) -> dict:
     for bid in bids:
         try:
             marketplace = bid["source"]["name"]
@@ -133,9 +129,6 @@ def parse_bids(bids):
         maker = bid["maker"]
         bid_type = bid["rawData"]["kind"]
 
-        #print(marketplace)
-        #print(target_marketplace)
-
         if marketplace == target_marketplace and bid["tokenSetId"] not in token_ids:
             if bid_type == "single-token":
                 nft_id = parse_nft_id(bid["tokenSetId"])
@@ -144,13 +137,9 @@ def parse_bids(bids):
             detailed_bids.append(bid)
 
             token_ids.append(bid["tokenSetID"])
-    
-    return {
-        "bids": detailed_bids
-    }
 
 # converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
-def convert_marketplace_name(input):
+def convert_marketplace_name(input: str) -> str:
     OS = "OpenSea"
     LR = "LooksRare"
     X2 = "X2Y2"
@@ -168,7 +157,7 @@ def convert_marketplace_name(input):
     return conversions[input]
 
 # gets user input in compliance w/ reservoir.tools accepted marketplace names
-def get_input_name():
+def get_input_name() -> str:
     name = input("Exchange name (opensea, looksrare, x2y2): ")
 
     try:
@@ -178,7 +167,7 @@ def get_input_name():
         return get_input_name()
 
 # gets project contract address from project name
-def get_contract_address(verbose = True):
+def get_contract_address(verbose = True) -> str:
     contract_data = contracts.contract_data
 
     if verbose:
@@ -195,19 +184,49 @@ def get_contract_address(verbose = True):
         return get_contract_address(verbose = False)
 
 # fills the marketplace orders dict with the keys for the appropriate NFT prices
-def fill_dict(start, end):
+def fill_dict(start: int, end: int) -> dict:
     dictionary = {}
     for i in range(start, end+1):
         dictionary[i] = 0
 
     return dictionary
 
+def get_data_type() -> str:
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-data_type', dest='data_type', type=str, help='data type to get data about')
+    args = parser.parse_args()
+
+    if args.data_type != None:
+        choice = args.data_type
+    else:
+        choice = input("bid, ask, or trade data: ")
+
+    conversions = {
+        "Bids":"bids",
+        "Bid":"bids",
+        "bid":"bids",
+        "bids":"bids",
+        "b":"bids",
+        "Asks":"asks",
+        "Ask":"asks",
+        "asks":"asks",
+        "ask":"asks",
+        "a":"asks"
+    }
+
+    try:
+        return conversions[choice]
+    except:
+        print("invalid data type")
+        return get_data_type()
+
 # instance variables
 contract = get_contract_address()
 target_marketplace = get_input_name()
 key = get_api_key()
 token_ids = []
-data_type = "bids"
+data_type = get_data_type()
 continuation = None
 total = 0
 
@@ -223,7 +242,6 @@ if data_type == "asks":
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
         asks = get_open_asks(contract, key, continuation)
-        print("\n")
         orders = asks["orders"]
         continuation = asks["continuation"]
 
@@ -255,9 +273,7 @@ if data_type == "bids":
         bids = bid_data["bids"]
         continuation = bid_data["continuation"]
 
-        parsed_bids = parse_bids(bids)
-
-        detailed_bids = parsed_bids["bids"]
+        parse_bids(bids)
 
     print("\n")
 
