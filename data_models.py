@@ -33,7 +33,7 @@ class TradeModel():
     currency = Column('currency', String)
     value = Column('value', Numeric)
     marketplace = Column('marketplace', String)
-    trade_date = Column('order_type', String)
+    timestamp = Column('order_type', Numeric)
     buyer = Column('buyer', String)
     seller = Column('seller', String)
 
@@ -60,12 +60,12 @@ class Bid:
         self.bid_type = bid_type
 
 class Trade:
-    def __init__(self, project_name, nft_id, currency, value, marketplace, trade_data, buyer, seller):
+    def __init__(self, project_name, nft_id, currency, value, marketplace, timestamp, buyer, seller):
         self.project_name = project_name
         self.nft_id = nft_id
         self.currency = currency
         self.value = value
         self.marketplace = marketplace
-        self.trade_data = trade_data
+        self.timestamp = timestamp
         self.buyer = buyer
         self.seller = seller

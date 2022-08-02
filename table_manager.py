@@ -6,15 +6,23 @@ from typing import Union
 def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str) -> None:
     if input_table == "ask":
         addition = asks.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
-    elif input_table == "bid":
+    if input_table == "bid":
         addition = bids.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, maker = order.maker, bid_type = order.bid_type)
-    else:
-        addition = trades.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
+    if input_table == "trade":
+        addition = trades.insert().values(
+            project_name = order.project_name, 
+            nft_id = order.nft_id, 
+            currency = order.currency, 
+            value = order.value, 
+            marketplace = order.marketplace, 
+            timestamp = order.timestamp, 
+            buyer = order.buyer, 
+            seller = order.seller)
 
     connection = engine.connect()
     connection.execute(addition)
 
-engine = create_engine("sqlite:///database.db", echo = False)
+engine = create_engine("sqlite:///database.db", echo = True)
 meta = MetaData()
 
 asks = Table(
@@ -48,7 +56,7 @@ trades = Table(
     TradeModel.currency,
     TradeModel.value,
     TradeModel.marketplace,
-    TradeModel.trade_date,
+    TradeModel.timestamp,
     TradeModel.buyer,
     TradeModel.seller,
 )

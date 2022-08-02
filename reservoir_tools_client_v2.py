@@ -4,6 +4,7 @@ import contracts
 from data_models import Ask, Bid, Trade
 import table_manager, math, os
 import argparse
+from web3 import Web3
 
 # gets an API key from the reservoir.tools API
 def get_api_key() -> json:
@@ -79,13 +80,36 @@ def get_open_asks(contract: str, key: str, continuation=None) -> json:
         "continuation": response["continuation"]
     }
 
+# gets past trades
+def get_trades(contract: str, key: str, continuation=None):
+    url = f"https://api.reservoir.tools/sales/bulk/v1?contract={contract}&limit=100"
+
+    if continuation != None:
+        url += f"&continuation={continuation}"
+
+    headers = {
+        "Accept": "*/*",
+        "x-api-key": key
+    }
+
+    try:
+        response = json.loads(requests.get(url, headers=headers).text)
+    except:
+        print("504 Error: Gateway timeout")
+        os._exit()
+
+    return {
+        "trades": response["sales"],
+        "continuation": response["continuation"]
+    }
+
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
     split = tokensetID.split(":", 2)
 
     return split[2]
 
-# returns the former marketplace orders + new ones parsed
+# converts ask JSON data to ask objects
 def parse_asks(orders: list) -> None:
     for ask in orders:
         try:
@@ -115,7 +139,8 @@ def parse_asks(orders: list) -> None:
             
             token_ids.append(ask["tokenSetId"])
 
-def parse_bids(bids: list) -> dict:
+# converts bid JSON data to bid objects
+def parse_bids(bids: list) -> None:
     for bid in bids:
         try:
             marketplace = bid["source"]["name"]
@@ -132,11 +157,31 @@ def parse_bids(bids: list) -> dict:
         if marketplace == target_marketplace and bid["tokenSetId"] not in token_ids:
             if bid_type == "single-token":
                 nft_id = parse_nft_id(bid["tokenSetId"])
+            else:
+                nft_id = "N/A"
 
-            bid = Bid(project_name, nft_id, currency, price, created_at, maker, bid_type)
-            detailed_bids.append(bid)
+            parsed_bid = Bid(project_name, nft_id, currency, price, created_at, maker, bid_type)
+            detailed_bids.append(parsed_bid)
 
             token_ids.append(bid["tokenSetID"])
+
+# converts trade JSON data to a trade object
+def parse_trades(trades: list) -> None:
+    for trade in trades:
+        project_name = name_from_contract(Web3.toChecksumAddress(trade["token"]["contract"]))
+        id = trade["token"]["tokenId"]
+        currency = "ETH"
+        price = trade["price"]
+        marketplace = trade["orderSource"]
+        trade_timestamp = trade["timestamp"]
+        buyer = trade["from"]
+        seller = trade["to"]
+
+        if marketplace == target_marketplace and trade["id"] not in token_ids:
+            parsed_trade = Trade(project_name, id, currency, price, marketplace, trade_timestamp, buyer, seller)
+            detailed_trades.append(parsed_trade)
+
+            token_ids.append(trade["id"])
 
 # converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
 def convert_marketplace_name(input: str) -> str:
@@ -155,6 +200,12 @@ def convert_marketplace_name(input: str) -> str:
     }
 
     return conversions[input]
+
+# returns a project name from a contract address
+def name_from_contract(contract: str) -> str:
+    contract_to_name = {v: k for k, v in contracts.contract_data.items()}
+
+    return contract_to_name[contract]
 
 # gets user input in compliance w/ reservoir.tools accepted marketplace names
 def get_input_name() -> str:
@@ -192,7 +243,6 @@ def fill_dict(start: int, end: int) -> dict:
     return dictionary
 
 def get_data_type() -> str:
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-data_type', dest='data_type', type=str, help='data type to get data about')
     args = parser.parse_args()
@@ -212,7 +262,12 @@ def get_data_type() -> str:
         "Ask":"asks",
         "asks":"asks",
         "ask":"asks",
-        "a":"asks"
+        "a":"asks",
+        "Trades":"trades",
+        "Trade":"trades",
+        "trade":"trades",
+        "trades":"trades",
+        "t":"trades"
     }
 
     try:
@@ -279,3 +334,16 @@ if data_type == "bids":
 
     for detailed_bid in detailed_bids:
         table_manager.insert_order(detailed_bid, "bid")
+
+if data_type == "trades":
+    detailed_trades = []
+
+    for i in range(15):
+        trade_data = get_trades(contract, key, continuation)
+        trades = trade_data["trades"]
+        continuation = trade_data["continuation"]
+
+        parse_trades(trades)
+
+    for detailed_trade in detailed_trades:
+        table_manager.insert_order(detailed_trade, "trade")
