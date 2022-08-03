@@ -22,7 +22,7 @@ def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str)
     connection = engine.connect()
     connection.execute(addition)
 
-engine = create_engine("sqlite:///database.db", echo = True)
+engine = create_engine("sqlite:///database.db", echo = False)
 meta = MetaData()
 
 asks = Table(

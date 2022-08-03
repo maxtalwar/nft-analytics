@@ -33,7 +33,7 @@ class TradeModel():
     currency = Column('currency', String)
     value = Column('value', Numeric)
     marketplace = Column('marketplace', String)
-    timestamp = Column('order_type', Numeric)
+    timestamp = Column('timestamp', Numeric)
     buyer = Column('buyer', String)
     seller = Column('seller', String)
 

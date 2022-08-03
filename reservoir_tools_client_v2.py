@@ -244,7 +244,7 @@ def fill_dict(start: int, end: int) -> dict:
 
 def get_data_type() -> str:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-data_type', dest='data_type', type=str, help='data type to get data about')
+    parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
     args = parser.parse_args()
 
     if args.data_type != None:
@@ -338,7 +338,7 @@ if data_type == "bids":
 if data_type == "trades":
     detailed_trades = []
 
-    for i in range(15):
+    for i in range(45):
         trade_data = get_trades(contract, key, continuation)
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
