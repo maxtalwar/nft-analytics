@@ -35,7 +35,8 @@ def get_floor_price() -> json:
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
 def get_looksrare_single_bids(contract: str) -> json:
-    url = f"https://api.looksrare.org/api/v1/orders/"
+    url = f'https://api.looksrare.org/api/v1/orders/?isOrderAsk=false&collection={contract}&status[]=VALID&pagination[first]=150'
+    # &first=50
 
     headers = {
         "Accept": "*/*",
@@ -105,7 +106,7 @@ def get_open_asks(contract: str, key: str, continuation=None) -> json:
 
 # gets past trades
 def get_trades(contract: str, key: str, continuation=None):
-    url = f"https://api.reservoir.tools/sales/bulk/v1?contract={contract}&limit=100"
+    url = f"https://api.reservoir.tools/sales/v3?contract={contract}&limit=100"
 
     if continuation != None:
         url += f"&continuation={continuation}"
@@ -157,7 +158,7 @@ def parse_asks(orders: list) -> None:
             else:
                 marketplace_asks[value] = 1
 
-            order = Ask(project_name, nft_id, currency, price, marketplace, created_at, expires_on, maker)
+            order = Ask(project_name, nft_id, currency, price, marketplace, created_at, expires_on, maker, "ETH")
             detailed_asks.append(order)
             
             token_ids.append(ask["tokenSetId"])
@@ -183,7 +184,7 @@ def parse_bids(bids: list) -> None:
             else:
                 nft_id = "N/A"
 
-            parsed_bid = Bid(project_name, nft_id, currency, price, created_at, maker, bid_type)
+            parsed_bid = Bid(project_name, nft_id, currency, price, created_at, maker, bid_type, "ETH")
             detailed_bids.append(parsed_bid)
 
             token_ids.append(bid["tokenSetID"])
@@ -199,9 +200,25 @@ def parse_trades(trades: list) -> None:
         trade_timestamp = trade["timestamp"]
         buyer = trade["from"]
         seller = trade["to"]
+        tx_id = trade["txHash"]
+        offer_type = trade["orderSide"]
+        
+        fee_rate = 0
+        if marketplace == "OpenSea":
+            fee_rate = 0.025
+        if marketplace == "LooksRare":
+            fee_rate = 0.02
+        if marketplace == "X2Y2":
+            fee_rate = 0.005
+
+        usdPrice = trade["usdPrice"]
+        try:
+            fee = usdPrice*fee_rate
+        except:
+            fee = 0
 
         if marketplace == target_marketplace and trade["id"] not in token_ids:
-            parsed_trade = Trade(project_name, id, currency, price, marketplace, trade_timestamp, buyer, seller)
+            parsed_trade = Trade(project_name, id, currency, price, marketplace, trade_timestamp, buyer, seller, "ETH", tx_id, offer_type, fee)
             detailed_trades.append(parsed_trade)
 
             token_ids.append(trade["id"])
@@ -299,77 +316,81 @@ def get_data_type() -> str:
         print("invalid data type")
         return get_data_type()
 
-if __name__ == "main":
-    # instance variables
-    contract = get_contract_address()
-    target_marketplace = get_input_name()
-    key = get_api_key()
-    token_ids = []
-    data_type = get_data_type()
-    continuation = None
-    total = 0
+# instance variables
+contract = get_contract_address()
+target_marketplace = get_input_name()
+key = get_api_key()
+token_ids = []
+data_type = get_data_type()
+continuation = None
+total = 0
 
-    print("fetching data... \n")
+print("fetching data... \n")
 
-    # pull and organize ask data
-    if data_type == "asks":
-        min_price = get_floor_price()
-        max_price = min_price*3
-        marketplace_asks = fill_dict(min_price, max_price)
-        detailed_asks = []
+# pull and organize ask data
+if data_type == "asks":
+    min_price = get_floor_price()
+    max_price = min_price*3
+    marketplace_asks = fill_dict(min_price, max_price)
+    detailed_asks = []
 
-        # continually fetches the next page of asks and updates the marketplace orders with the next asks
-        for i in range(15):
-            asks = get_open_asks(contract, key, continuation)
-            orders = asks["orders"]
-            continuation = asks["continuation"]
+    # continually fetches the next page of asks and updates the marketplace orders with the next asks
+    for i in range(15):
+        asks = get_open_asks(contract, key, continuation)
+        orders = asks["orders"]
+        continuation = asks["continuation"]
 
-            parse_asks(orders)
+        parse_asks(orders)
 
-        marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
+    marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
-        # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
+    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
 
-        print(f"Asks at each round ETH value from {min_price} to {max_price}:")
+    print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
-        for value in marketplace_asks.keys():
-            print(str(value) + ":" + str(marketplace_asks[value]))
-            total += marketplace_asks[value]
+    for value in marketplace_asks.keys():
+        print(str(value) + ":" + str(marketplace_asks[value]))
+        total += marketplace_asks[value]
 
-        if total == len(detailed_asks):
-            print("\n")
-            for detailed_ask in detailed_asks:
-                table_manager.insert_order(detailed_ask, "ask")
-
-    # pull and organize bid data
-    if data_type == "bids":
-        detailed_bids = []
-
-        for i in range(15):
-            bid_data = get_open_bids(contract, key, continuation)
-            print(bid_data)
-            print("\n")
-            bids = bid_data["bids"]
-            continuation = bid_data["continuation"]
-
-            parse_bids(bids)
-
+    if total == len(detailed_asks):
         print("\n")
+        for detailed_ask in detailed_asks:
+            table_manager.insert_order(detailed_ask, "ask")
 
-        for detailed_bid in detailed_bids:
-            table_manager.insert_order(detailed_bid, "bid")
+# pull and organize bid data
+if data_type == "bids":
+    detailed_bids = []
 
-    if data_type == "trades":
-        detailed_trades = []
+    for i in range(15):
+        bid_data = get_open_bids(contract, key, continuation)
+        print(bid_data)
+        print("\n")
+        bids = bid_data["bids"]
+        continuation = bid_data["continuation"]
 
-        for i in range(45):
-            trade_data = get_trades(contract, key, continuation)
-            trades = trade_data["trades"]
-            continuation = trade_data["continuation"]
+        parse_bids(bids)
 
-            parse_trades(trades)
+    print("\n")
 
-        for detailed_trade in detailed_trades:
+    for detailed_bid in detailed_bids:
+        table_manager.insert_order(detailed_bid, "bid")
+
+if data_type == "trades":
+    detailed_trades = []
+
+    for i in range(45):
+        trade_data = get_trades(contract, key, continuation)
+        trades = trade_data["trades"]
+        continuation = trade_data["continuation"]
+
+        parse_trades(trades)
+
+    for detailed_trade in detailed_trades:
+
+        try:
             table_manager.insert_order(detailed_trade, "trade")
+        except:
+            print("writing data failed -- try resetting database file")
+            os._exit()
 
-    print("data parsing complete")
+print("data parsing complete")

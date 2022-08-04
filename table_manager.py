@@ -5,9 +5,9 @@ from typing import Union
 
 def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str) -> None:
     if input_table == "ask":
-        addition = asks.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker)
+        addition = asks.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, expires_on = order.expires_on, maker = order.maker, network = order.network)
     if input_table == "bid":
-        addition = bids.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, maker = order.maker, bid_type = order.bid_type)
+        addition = bids.insert().values(project_name = order.project_name, nft_id = order.nft_id, currency = order.currency, value = order.value, marketplace = order.marketplace, created_at = order.created_at, maker = order.maker, bid_type = order.bid_type, network = order.network)
     if input_table == "trade":
         addition = trades.insert().values(
             project_name = order.project_name, 
@@ -17,7 +17,11 @@ def insert_order(order: Union[AskModel, BidModel, TradeModel], input_table: str)
             marketplace = order.marketplace, 
             timestamp = order.timestamp, 
             buyer = order.buyer, 
-            seller = order.seller)
+            seller = order.seller,
+            network = order.network,
+            tx_id = order.tx_id,
+            offer_type = order.offer_type,
+            fee = order.fee)
 
     connection = engine.connect()
     connection.execute(addition)
@@ -35,6 +39,7 @@ asks = Table(
     AskModel.created_at,
     AskModel.expires_on,
     AskModel.maker,
+    AskModel.network
 )
 
 bids = Table(
@@ -47,6 +52,7 @@ bids = Table(
     BidModel.created_at,
     BidModel.maker,
     BidModel.bid_type,
+    BidModel.network
 )
 
 trades = Table(
@@ -59,6 +65,10 @@ trades = Table(
     TradeModel.timestamp,
     TradeModel.buyer,
     TradeModel.seller,
+    TradeModel.network,
+    TradeModel.tx_id,
+    TradeModel.offer_type,
+    TradeModel.fee
 )
 
 if __name__ == '__main__':

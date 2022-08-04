@@ -11,4 +11,3 @@ contract_data = {
         "Azuki": "0xED5AF388653567Af2F388E6224dC7C4b3241C544",
         "Veefriends": "0xa3AEe8BcE55BEeA1951EF834b99f3Ac60d1ABeeB"
 }
-
