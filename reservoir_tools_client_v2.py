@@ -34,6 +34,28 @@ def get_floor_price() -> json:
 
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
+def get_looksrare_single_bids(contract: str) -> json:
+    url = f"https://api.looksrare.org/api/v1/orders/"
+
+    headers = {
+        "Accept": "*/*",
+        "isOrderAsk": "false",
+        "collection": contract,
+        "status": "['VALID']"
+    }
+
+    response = json.loads(requests.get(url, headers=headers).text)["data"]
+
+    return response
+
+def get_open_bids_v2(contract: str, key: str, continuation=None) -> json:
+    looksrare_bids = get_looksrare_single_bids(contract)
+
+    total = looksrare_bids
+    #total = dict(looksrare_bids, opensea_bids)
+
+    return total
+
 # gets open bids on a specific project
 def get_open_bids(contract: str, key: str, continuation=None) -> json:
     url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
@@ -59,6 +81,7 @@ def get_open_bids(contract: str, key: str, continuation=None) -> json:
 
 # gets open asks on a specific project from the reservoir API
 def get_open_asks(contract: str, key: str, continuation=None) -> json:
+    global errors
     url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=false&limit=100"
 
     if continuation != None:
@@ -276,74 +299,77 @@ def get_data_type() -> str:
         print("invalid data type")
         return get_data_type()
 
-# instance variables
-contract = get_contract_address()
-target_marketplace = get_input_name()
-key = get_api_key()
-token_ids = []
-data_type = get_data_type()
-continuation = None
-total = 0
+if __name__ == "main":
+    # instance variables
+    contract = get_contract_address()
+    target_marketplace = get_input_name()
+    key = get_api_key()
+    token_ids = []
+    data_type = get_data_type()
+    continuation = None
+    total = 0
 
-print("fetching data... \n")
+    print("fetching data... \n")
 
-# pull and organize ask data
-if data_type == "asks":
-    min_price = get_floor_price()
-    max_price = min_price*3
-    marketplace_asks = fill_dict(min_price, max_price)
-    detailed_asks = []
+    # pull and organize ask data
+    if data_type == "asks":
+        min_price = get_floor_price()
+        max_price = min_price*3
+        marketplace_asks = fill_dict(min_price, max_price)
+        detailed_asks = []
 
-    # continually fetches the next page of asks and updates the marketplace orders with the next asks
-    for i in range(15):
-        asks = get_open_asks(contract, key, continuation)
-        orders = asks["orders"]
-        continuation = asks["continuation"]
+        # continually fetches the next page of asks and updates the marketplace orders with the next asks
+        for i in range(15):
+            asks = get_open_asks(contract, key, continuation)
+            orders = asks["orders"]
+            continuation = asks["continuation"]
 
-        parse_asks(orders)
+            parse_asks(orders)
 
-    marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
+        marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
-    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
+        # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
 
-    print(f"Asks at each round ETH value from {min_price} to {max_price}:")
+        print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
-    for value in marketplace_asks.keys():
-        print(str(value) + ":" + str(marketplace_asks[value]))
-        total += marketplace_asks[value]
+        for value in marketplace_asks.keys():
+            print(str(value) + ":" + str(marketplace_asks[value]))
+            total += marketplace_asks[value]
 
-    if total == len(detailed_asks):
+        if total == len(detailed_asks):
+            print("\n")
+            for detailed_ask in detailed_asks:
+                table_manager.insert_order(detailed_ask, "ask")
+
+    # pull and organize bid data
+    if data_type == "bids":
+        detailed_bids = []
+
+        for i in range(15):
+            bid_data = get_open_bids(contract, key, continuation)
+            print(bid_data)
+            print("\n")
+            bids = bid_data["bids"]
+            continuation = bid_data["continuation"]
+
+            parse_bids(bids)
+
         print("\n")
-        for detailed_ask in detailed_asks:
-            table_manager.insert_order(detailed_ask, "ask")
 
-# pull and organize bid data
-if data_type == "bids":
-    detailed_bids = []
+        for detailed_bid in detailed_bids:
+            table_manager.insert_order(detailed_bid, "bid")
 
-    for i in range(15):
-        bid_data = get_open_bids(contract, key, continuation)
-        print(bid_data)
-        print("\n")
-        bids = bid_data["bids"]
-        continuation = bid_data["continuation"]
+    if data_type == "trades":
+        detailed_trades = []
 
-        parse_bids(bids)
+        for i in range(45):
+            trade_data = get_trades(contract, key, continuation)
+            trades = trade_data["trades"]
+            continuation = trade_data["continuation"]
 
-    print("\n")
+            parse_trades(trades)
 
-    for detailed_bid in detailed_bids:
-        table_manager.insert_order(detailed_bid, "bid")
+        for detailed_trade in detailed_trades:
+            table_manager.insert_order(detailed_trade, "trade")
 
-if data_type == "trades":
-    detailed_trades = []
-
-    for i in range(45):
-        trade_data = get_trades(contract, key, continuation)
-        trades = trade_data["trades"]
-        continuation = trade_data["continuation"]
-
-        parse_trades(trades)
-
-    for detailed_trade in detailed_trades:
-        table_manager.insert_order(detailed_trade, "trade")
+    print("data parsing complete")
