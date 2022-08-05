@@ -34,28 +34,28 @@ def get_floor_price() -> json:
 
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
-def get_looksrare_single_bids(contract: str) -> json:
-    url = f'https://api.looksrare.org/api/v1/orders/?isOrderAsk=false&collection={contract}&status[]=VALID&pagination[first]=150'
-    # &first=50
+def get_looksrare_single_bids(contract: str, continuation=None) -> json:
+    url = f'https://api.looksrare.org/api/v1/orders?isOrderAsk=false&collection={contract}&price%5Bmin%5D=1000000000000000000&status%5B%5D=VALID&pagination%5Bfirst%5D=150'
+
+    if continuation != None:
+        url += f'&pagination[cursor]={continuation}'
 
     headers = {
-        "Accept": "*/*",
-        "isOrderAsk": "false",
-        "collection": contract,
-        "status": "['VALID']"
+        "Accept": "*/*"
     }
 
     response = json.loads(requests.get(url, headers=headers).text)["data"]
 
     return response
 
-def get_open_bids_v2(contract: str, key: str, continuation=None) -> json:
-    looksrare_bids = get_looksrare_single_bids(contract)
+def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=None) -> json:
+    if marketplace == "LooksRare":
+        bids = get_looksrare_single_bids(contract, continuation)
+    else:
+        print("unsupported marketplace for bids")
+        os._exit()
 
-    total = looksrare_bids
-    #total = dict(looksrare_bids, opensea_bids)
-
-    return total
+    return bids
 
 # gets open bids on a specific project
 def get_open_bids(contract: str, key: str, continuation=None) -> json:
@@ -164,30 +164,31 @@ def parse_asks(orders: list) -> None:
             token_ids.append(ask["tokenSetId"])
 
 # converts bid JSON data to bid objects
-def parse_bids(bids: list) -> None:
+def parse_looksrare_bids(bids: list) -> None:
     for bid in bids:
-        try:
-            marketplace = bid["source"]["name"]
-        except:
-            marketplace = convert_marketplace_name(bid["kind"])
-        
-        project_name = bid['metadata']['data']['collectionName']
+        marketplace = "LooksRare"
+        project_name = name_from_contract(bid["collectionAddress"])
         currency = "ETH"
-        price = bid["price"]
-        created_at = bid["createdAt"]
-        maker = bid["maker"]
-        bid_type = bid["rawData"]["kind"]
+        price = str(float(bid["price"])/(10**18))
+        created_at = bid["startTime"]
+        maker = bid["signer"]
+        
+        strategy = bid["strategy"]
+        if strategy == "0x56244Bb70CbD3EA9Dc8007399F61dFC065190031":
+            bid_type = "single-token"
+        else:
+            bid_type = "collection-offer"
 
-        if marketplace == target_marketplace and bid["tokenSetId"] not in token_ids:
+        if bid["hash"] not in token_ids:
             if bid_type == "single-token":
-                nft_id = parse_nft_id(bid["tokenSetId"])
+                nft_id = bid["tokenId"]
             else:
                 nft_id = "N/A"
 
-            parsed_bid = Bid(project_name, nft_id, currency, price, created_at, maker, bid_type, "ETH")
+            parsed_bid = Bid(project_name, nft_id, currency, price, marketplace, created_at, maker, bid_type, "ETH")
             detailed_bids.append(parsed_bid)
 
-            token_ids.append(bid["tokenSetID"])
+            token_ids.append(bid["hash"])
 
 # converts trade JSON data to a trade object
 def parse_trades(trades: list) -> None:
@@ -335,7 +336,7 @@ if data_type == "asks":
     detailed_asks = []
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
-    for i in range(15):
+    for i in range(150):
         asks = get_open_asks(contract, key, continuation)
         orders = asks["orders"]
         continuation = asks["continuation"]
@@ -345,7 +346,6 @@ if data_type == "asks":
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
     # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
-
     print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
     for value in marketplace_asks.keys():
@@ -362,18 +362,20 @@ if data_type == "bids":
     detailed_bids = []
 
     for i in range(15):
-        bid_data = get_open_bids(contract, key, continuation)
-        print(bid_data)
-        print("\n")
-        bids = bid_data["bids"]
-        continuation = bid_data["continuation"]
+        bids = get_open_bids_v2(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", marketplace=target_marketplace, continuation=continuation)
+        try:
+            continuation = bids[-1]["hash"]
+        except:
+            continuation = None
 
-        parse_bids(bids)
-
-    print("\n")
+        parse_looksrare_bids(bids)
 
     for detailed_bid in detailed_bids:
-        table_manager.insert_order(detailed_bid, "bid")
+        try:
+            table_manager.insert_order(detailed_bid, "bid")
+        except:
+            print("writing data failed -- try resetting database file")
+            os._exit()
 
 if data_type == "trades":
     detailed_trades = []
@@ -386,7 +388,6 @@ if data_type == "trades":
         parse_trades(trades)
 
     for detailed_trade in detailed_trades:
-
         try:
             table_manager.insert_order(detailed_trade, "trade")
         except:
