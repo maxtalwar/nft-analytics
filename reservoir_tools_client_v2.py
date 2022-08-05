@@ -34,11 +34,14 @@ def get_floor_price() -> json:
 
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
-def get_looksrare_single_bids(contract: str, continuation=None) -> json:
+def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
     url = f'https://api.looksrare.org/api/v1/orders?isOrderAsk=false&collection={contract}&price%5Bmin%5D=1000000000000000000&status%5B%5D=VALID&pagination%5Bfirst%5D=150'
 
     if continuation != None:
         url += f'&pagination[cursor]={continuation}'
+
+    if strategy != None:
+        url += f'&strategy={strategy}'
 
     headers = {
         "Accept": "*/*"
@@ -48,9 +51,13 @@ def get_looksrare_single_bids(contract: str, continuation=None) -> json:
 
     return response
 
-def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=None) -> json:
+def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=None, bid_type="single") -> json:
     if marketplace == "LooksRare":
-        bids = get_looksrare_single_bids(contract, continuation)
+        if bid_type == "single":
+            bids = get_looksrare_bids(contract, continuation=continuation)
+        else:
+            bids = get_looksrare_bids(contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
+            print(bids)
     else:
         print("unsupported marketplace for bids")
         os._exit()
@@ -127,6 +134,23 @@ def get_trades(contract: str, key: str, continuation=None):
         "continuation": response["continuation"]
     }
 
+# get bids from opensea API stream
+def get_opensea_bids_stream(contract: str, api_key: str) -> json:
+    url = f"wss://stream.openseabeta.com/socket/websocket?token={api_key}"
+
+    slug = contracts.contract_to_collection_slug[contract]
+    headers = {
+        "topic": f"collection:{slug}",
+        "event": "item_received_bid",
+        "payload": {},
+        "ref": 0
+    }
+
+    stream = requests.Session()
+    response = stream.get(url, headers=headers, stream=True)
+
+    return response
+
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
     split = tokensetID.split(":", 2)
@@ -165,6 +189,7 @@ def parse_asks(orders: list) -> None:
 
 # converts bid JSON data to bid objects
 def parse_looksrare_bids(bids: list) -> None:
+    makers = []
     for bid in bids:
         marketplace = "LooksRare"
         project_name = name_from_contract(bid["collectionAddress"])
@@ -175,9 +200,9 @@ def parse_looksrare_bids(bids: list) -> None:
         
         strategy = bid["strategy"]
         if strategy == "0x56244Bb70CbD3EA9Dc8007399F61dFC065190031":
-            bid_type = "single-token"
+            bid_type = "single"
         else:
-            bid_type = "collection-offer"
+            bid_type = "collection"
 
         if bid["hash"] not in token_ids:
             if bid_type == "single-token":
@@ -189,6 +214,7 @@ def parse_looksrare_bids(bids: list) -> None:
             detailed_bids.append(parsed_bid)
 
             token_ids.append(bid["hash"])
+            makers.append(maker)
 
 # converts trade JSON data to a trade object
 def parse_trades(trades: list) -> None:
@@ -362,13 +388,18 @@ if data_type == "bids":
     detailed_bids = []
 
     for i in range(15):
-        bids = get_open_bids_v2(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", marketplace=target_marketplace, continuation=continuation)
+        single_bids = get_open_bids_v2(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", marketplace=target_marketplace, continuation=continuation, bid_type = "single")
         try:
-            continuation = bids[-1]["hash"]
+            continuation = single_bids[-1]["hash"]
         except:
             continuation = None
 
-        parse_looksrare_bids(bids)
+        parse_looksrare_bids(single_bids)
+
+    for i in range(15):
+        collection_bids = get_looksrare_bids(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
+
+        parse_looksrare_bids(collection_bids)
 
     for detailed_bid in detailed_bids:
         try:
