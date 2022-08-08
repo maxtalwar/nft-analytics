@@ -207,7 +207,7 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
             token_ids.append(trade["id"])
 
 # manage asks
-def manage_asks():
+def manage_asks(verbose = True):
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
@@ -225,19 +225,20 @@ def manage_asks():
 
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
-    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
-    print(f"Asks at each round ETH value from {min_price} to {max_price}:")
+    if verbose:
+        # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
+        print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
-    for value in marketplace_asks.keys():
-        print(str(value) + ":" + str(marketplace_asks[value]))
-        total += marketplace_asks[value]
+        for value in marketplace_asks.keys():
+            print(str(value) + ":" + str(marketplace_asks[value]))
+            total += marketplace_asks[value]
 
     if total == len(detailed_asks):
         print("\n")
         insert_data(detailed_asks, "ask")
 
 # manage bids
-def manage_bids():
+def manage_bids() -> None:
     detailed_bids = []
     continuation = None
 
@@ -259,7 +260,7 @@ def manage_bids():
     insert_data(detailed_bids, "bid")
 
 # manage trades
-def manage_trades():
+def manage_trades() -> None:
     detailed_trades = []
     continuation = None
 
@@ -278,7 +279,6 @@ target_marketplace = get_input_name()
 key = data.get_reservoir_api_key()
 data_type = get_data_type()
 token_ids = []
-continuation = None
 
 print("fetching data... \n")
 
