@@ -3,6 +3,8 @@ from collections import OrderedDict
 from data_models import Ask, Bid, Trade
 from web3 import Web3
 import endpoints as data
+import streamlit as st
+import matplotlib.pyplot as plt
 
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
@@ -89,7 +91,7 @@ def get_data_type(arguments = True) -> str:
     if args.data_type != None:
         choice = args.data_type
     else:
-        choice = input("bid, ask, or trade data: ")
+        choice = input("ask, ask_distribution, bid, or trade data: ")
 
     conversions = {
         "Bids":"bids",
@@ -118,12 +120,26 @@ def get_data_type(arguments = True) -> str:
         return get_data_type(arguments = False)
 
 # inserts data into table
-def insert_data(detailed_data, type):
+def insert_data(detailed_data: list, type: str) -> None:
     for detailed_piece_of_data in detailed_data:
         try:
             table_manager.insert_order(detailed_piece_of_data, type)
         except:
             sys.exit("writing data failed -- try resetting database file")
+
+# creates a bar chart
+def bar_chart(marketplace_listings: dict) -> None:
+    marketplaces = list(marketplace_listings.keys())
+    listings = list(marketplace_listings.values())
+
+    figure = plt.figure(figsize = (10, 5))
+
+    plt.bar(marketplaces, listings)
+    plt.xlabel("Marketplace")
+    plt.ylabel("# of Listings")
+    plt.title("# of Listings Across Exchanges")
+
+    st.pyplot(figure)
 
 # converts ask JSON data to ask objects
 def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_price: int, max_price: int) -> None:
@@ -261,7 +277,8 @@ def manage_ask_distribution() -> dict:
         else:
             count[ask.marketplace] = 1
 
-    print(count)
+    bar_chart(count)
+
     return count
 
 # manage bids
@@ -313,6 +330,7 @@ print("fetching data... \n")
 if data_type == "asks":
     manage_asks(verbose = False)
 
+# pull and organize ask distribution data
 if data_type == "ask_distribution":
     manage_ask_distribution()
 
