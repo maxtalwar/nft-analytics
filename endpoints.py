@@ -1,4 +1,4 @@
-import requests, json, math, contracts, sys
+import requests, json, math, contracts, sys, time
 
 # gets an API key from the reservoir.tools API
 def get_reservoir_api_key() -> json:
@@ -83,7 +83,9 @@ def get_open_asks(contract: str, key: str, continuation=None) -> json:
     try:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
-        sys.exit("504 Error: Gateway timeout")
+        time.sleep(15)
+        return get_open_asks(contract, key, continuation)
+
 
     return {
         "orders": response["orders"], 
