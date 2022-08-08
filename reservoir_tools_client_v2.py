@@ -5,151 +5,7 @@ from data_models import Ask, Bid, Trade
 import table_manager, math, os
 import argparse
 from web3 import Web3
-
-# gets an API key from the reservoir.tools API
-def get_api_key() -> json:
-    url = "https://api.reservoir.tools/api-keys"
-
-    payload = "appName=Marketplace_Indexer&email=proton0x%40photonmail.com&website=https%3A%2F%2Fgithub.com%2F0xphoton%2FNFT-Marketplaces"
-    headers = {
-        "Accept": "*/*",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "x-api-key": "demo-api-key"
-    }
-
-    response = requests.post(url, data=payload, headers=headers)
-
-    return json.loads(response.text)["key"]
-
-# gets the floor price for a specific project
-def get_floor_price() -> json:
-    url = f"https://api.reservoir.tools/collection/v3?id={contract}&includeTopBid=false"
-
-    headers = {
-        "Accept": "*/*",
-        "x-api-key": key
-    }
-
-    response = json.loads(requests.get(url, headers=headers).text)
-
-    return int(math.floor(response["collection"]["floorAsk"]["price"]))
-
-def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
-    url = f'https://api.looksrare.org/api/v1/orders?isOrderAsk=false&collection={contract}&price%5Bmin%5D=1000000000000000000&status%5B%5D=VALID&pagination%5Bfirst%5D=150'
-
-    if continuation != None:
-        url += f'&pagination[cursor]={continuation}'
-
-    if strategy != None:
-        url += f'&strategy={strategy}'
-
-    headers = {
-        "Accept": "*/*"
-    }
-
-    response = json.loads(requests.get(url, headers=headers).text)["data"]
-
-    return response
-
-def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=None, bid_type="single") -> json:
-    if marketplace == "LooksRare":
-        if bid_type == "single":
-            bids = get_looksrare_bids(contract, continuation=continuation)
-        else:
-            bids = get_looksrare_bids(contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
-            print(bids)
-    else:
-        print("unsupported marketplace for bids")
-        os._exit()
-
-    return bids
-
-# gets open bids on a specific project
-def get_open_bids(contract: str, key: str, continuation=None) -> json:
-    url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
-
-    if continuation != None:
-        url += f"&continuation={continuation}"
-
-    headers = {
-        "Accept": "*/*",
-        "x-api-key": key
-    }
-
-    try:
-        response = json.loads(requests.get(url, headers=headers).text)
-    except:
-        print("504 Error: Gateway timeout")
-        os._exit()
-
-    return {
-        "bids": response["orders"],
-        "continuation": response["continuation"]
-    }
-
-# gets open asks on a specific project from the reservoir API
-def get_open_asks(contract: str, key: str, continuation=None) -> json:
-    global errors
-    url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=false&limit=100"
-
-    if continuation != None:
-        url += f"&continuation={continuation}"
-
-    headers = {
-        "Accept": "*/*",
-        "x-api-key": key
-    }
-
-    try:
-        response = json.loads(requests.get(url, headers=headers).text)
-    except:
-        print("504 Error: Gateway timeout")
-        os._exit()
-
-    return {
-        "orders": response["orders"], 
-        "continuation": response["continuation"]
-    }
-
-# gets past trades
-def get_trades(contract: str, key: str, continuation=None):
-    url = f"https://api.reservoir.tools/sales/v3?contract={contract}&limit=100"
-
-    if continuation != None:
-        url += f"&continuation={continuation}"
-
-    headers = {
-        "Accept": "*/*",
-        "x-api-key": key
-    }
-
-    try:
-        response = json.loads(requests.get(url, headers=headers).text)
-    except:
-        print("504 Error: Gateway timeout")
-        os._exit()
-
-    return {
-        "trades": response["sales"],
-        "continuation": response["continuation"]
-    }
-
-# get bids from opensea API stream
-def get_opensea_bids_stream(contract: str, api_key: str) -> json:
-    url = f"wss://stream.openseabeta.com/socket/websocket?token={api_key}"
-
-    slug = contracts.contract_to_collection_slug[contract]
-    headers = {
-        "topic": f"collection:{slug}",
-        "event": "item_received_bid",
-        "payload": {},
-        "ref": 0
-    }
-
-    stream = requests.Session()
-    response = stream.get(url, headers=headers, stream=True)
-
-    return response
+import data_endpoints as data
 
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
@@ -309,6 +165,7 @@ def fill_dict(start: int, end: int) -> dict:
 
     return dictionary
 
+# gets data type from command line arguments
 def get_data_type() -> str:
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
@@ -343,6 +200,7 @@ def get_data_type() -> str:
         print("invalid data type")
         return get_data_type()
 
+# inserts data into table
 def insert_data(detailed_data, type):
     for detailed_piece_of_data in detailed_data:
         try:
@@ -354,9 +212,9 @@ def insert_data(detailed_data, type):
 # instance variables
 contract = get_contract_address()
 target_marketplace = get_input_name()
-key = get_api_key()
-token_ids = []
+key = data.get_reservoir_api_key()
 data_type = get_data_type()
+token_ids = []
 continuation = None
 total = 0
 
@@ -364,14 +222,14 @@ print("fetching data... \n")
 
 # pull and organize ask data
 if data_type == "asks":
-    min_price = get_floor_price()
+    min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
     detailed_asks = []
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
-    for i in range(150):
-        asks = get_open_asks(contract, key, continuation)
+    for i in range(15):
+        asks = data.get_open_asks(contract, key, continuation)
         orders = asks["orders"]
         continuation = asks["continuation"]
 
@@ -395,7 +253,7 @@ if data_type == "bids":
     detailed_bids = []
 
     for i in range(15):
-        single_bids = get_open_bids_v2(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", marketplace=target_marketplace, continuation=continuation, bid_type = "single")
+        single_bids = data.get_open_bids_v2(contract = contract, marketplace = target_marketplace, continuation = continuation, bid_type = "single")
         try:
             continuation = single_bids[-1]["hash"]
         except:
@@ -404,17 +262,18 @@ if data_type == "bids":
         parse_looksrare_bids(single_bids)
 
     for i in range(15):
-        collection_bids = get_looksrare_bids(contract="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
+        collection_bids = data.get_looksrare_bids(contract = contract, strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
 
         parse_looksrare_bids(collection_bids)
 
     insert_data(detailed_bids, "bid")
 
+# pull and organize trade data
 if data_type == "trades":
     detailed_trades = []
 
     for i in range(45):
-        trade_data = get_trades(contract, key, continuation)
+        trade_data = data.get_trades(contract, key, continuation)
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
 
