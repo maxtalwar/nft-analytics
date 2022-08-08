@@ -1,4 +1,4 @@
-from sqlalchemy import ARRAY, Column, Numeric, String
+from sqlalchemy import Column, Numeric, String
 
 class AskModel():
     __tablename__ = "asks"

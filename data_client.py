@@ -1,9 +1,6 @@
-import requests, json
+import json, contracts, argparse, table_manager
 from collections import OrderedDict
-import contracts
 from data_models import Ask, Bid, Trade
-import table_manager, math, os
-import argparse
 from web3 import Web3
 import endpoints as data
 

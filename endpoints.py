@@ -1,4 +1,4 @@
-import requests, json, math, os, contracts
+import requests, json, math, contracts
 
 # gets an API key from the reservoir.tools API
 def get_reservoir_api_key() -> json:
