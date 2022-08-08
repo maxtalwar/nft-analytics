@@ -343,6 +343,14 @@ def get_data_type() -> str:
         print("invalid data type")
         return get_data_type()
 
+def insert_data(detailed_data, type):
+    for detailed_piece_of_data in detailed_data:
+        try:
+            table_manager.insert_order(detailed_piece_of_data, type)
+        except:
+            print("writing data failed -- try resetting database file")
+            os._exit()
+
 # instance variables
 contract = get_contract_address()
 target_marketplace = get_input_name()
@@ -380,8 +388,7 @@ if data_type == "asks":
 
     if total == len(detailed_asks):
         print("\n")
-        for detailed_ask in detailed_asks:
-            table_manager.insert_order(detailed_ask, "ask")
+        insert_data(detailed_asks, "ask")
 
 # pull and organize bid data
 if data_type == "bids":
@@ -401,12 +408,7 @@ if data_type == "bids":
 
         parse_looksrare_bids(collection_bids)
 
-    for detailed_bid in detailed_bids:
-        try:
-            table_manager.insert_order(detailed_bid, "bid")
-        except:
-            print("writing data failed -- try resetting database file")
-            os._exit()
+    insert_data(detailed_bids, "bid")
 
 if data_type == "trades":
     detailed_trades = []
@@ -418,11 +420,6 @@ if data_type == "trades":
 
         parse_trades(trades)
 
-    for detailed_trade in detailed_trades:
-        try:
-            table_manager.insert_order(detailed_trade, "trade")
-        except:
-            print("writing data failed -- try resetting database file")
-            os._exit()
+    insert_data(detailed_trades, "trade")
 
 print("data parsing complete")
