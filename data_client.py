@@ -114,10 +114,10 @@ def insert_data(detailed_data, type):
             table_manager.insert_order(detailed_piece_of_data, type)
         except:
             print("writing data failed -- try resetting database file")
-            os._exit()
+            quit()
 
 # converts ask JSON data to ask objects
-def parse_asks(orders: list) -> None:
+def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_price: int, max_price: int) -> None:
     for ask in orders:
         try:
             marketplace = ask["source"]["name"]
@@ -209,23 +209,13 @@ def parse_trades(trades: list) -> None:
 
             token_ids.append(trade["id"])
 
-# instance variables
-contract = get_contract_address()
-target_marketplace = get_input_name()
-key = data.get_reservoir_api_key()
-data_type = get_data_type()
-token_ids = []
-continuation = None
-total = 0
-
-print("fetching data... \n")
-
-# pull and organize ask data
-if data_type == "asks":
+def manage_asks():
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
     detailed_asks = []
+    continuation = None
+    total = 0
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
@@ -233,7 +223,7 @@ if data_type == "asks":
         orders = asks["orders"]
         continuation = asks["continuation"]
 
-        parse_asks(orders)
+        parse_asks(orders, marketplace_asks = marketplace_asks, detailed_asks = detailed_asks, min_price = min_price, max_price = max_price)
 
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
@@ -247,6 +237,20 @@ if data_type == "asks":
     if total == len(detailed_asks):
         print("\n")
         insert_data(detailed_asks, "ask")
+
+# instance variables
+contract = get_contract_address()
+target_marketplace = get_input_name()
+key = data.get_reservoir_api_key()
+data_type = get_data_type()
+token_ids = []
+continuation = None
+
+print("fetching data... \n")
+
+# pull and organize ask data
+if data_type == "asks":
+    manage_asks()
 
 # pull and organize bid data
 if data_type == "bids":
