@@ -225,16 +225,16 @@ def manage_asks(verbose = True):
 
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
+    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
     if verbose:
-        # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
         print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
-        for value in marketplace_asks.keys():
+    for value in marketplace_asks.keys():
+        if verbose:
             print(str(value) + ":" + str(marketplace_asks[value]))
-            total += marketplace_asks[value]
+        total += marketplace_asks[value]
 
     if total == len(detailed_asks):
-        print("\n")
         insert_data(detailed_asks, "ask")
 
 # manage bids
@@ -284,7 +284,7 @@ print("fetching data... \n")
 
 # pull and organize ask data
 if data_type == "asks":
-    manage_asks()
+    manage_asks(verbose = False)
 
 # pull and organize bid data
 if data_type == "bids":
