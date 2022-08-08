@@ -29,7 +29,7 @@ def get_floor_price(contract: str, key: str) -> json:
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
 # gets bid on looksrare
-def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
+def get_looksrare_bids(contract: str, continuation: str = None, strategy: str = None) -> json:
     url = f'https://api.looksrare.org/api/v1/orders?isOrderAsk=false&collection={contract}&price%5Bmin%5D=1000000000000000000&status%5B%5D=VALID&pagination%5Bfirst%5D=150'
 
     if continuation != None:
@@ -47,7 +47,7 @@ def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
     return response
 
 # gets open bids on a specific project (currently not working because of issue w/ reservoir API)
-def get_open_bids(contract: str, key: str, continuation=None) -> json:
+def get_open_bids(contract: str, key: str, continuation: str = None) -> json:
     url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
 
     if continuation != None:
@@ -69,7 +69,7 @@ def get_open_bids(contract: str, key: str, continuation=None) -> json:
     }
 
 # gets open asks on a specific project from the reservoir API
-def get_open_asks(contract: str, key: str, continuation=None) -> json:
+def get_open_asks(contract: str, key: str, continuation: str = None) -> json:
     url = f"https://api.reservoir.tools/orders/asks/v2?contracts={contract}&includePrivate=false&limit=100"
 
     if continuation != None:
@@ -93,7 +93,7 @@ def get_open_asks(contract: str, key: str, continuation=None) -> json:
     }
 
 # gets past trades
-def get_trades(contract: str, key: str, continuation=None):
+def get_trades(contract: str, key: str, continuation: str = None):
     url = f"https://api.reservoir.tools/sales/v3?contract={contract}&limit=100"
 
     if continuation != None:

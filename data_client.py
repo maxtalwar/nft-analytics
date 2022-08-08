@@ -57,7 +57,7 @@ def name_from_contract(contract: str) -> str:
     return contract_to_name[contract]
 
 # gets project contract address from project name
-def get_contract_address(verbose = True) -> str:
+def get_contract_address(verbose: bool = True) -> str:
     contract_data = contracts.contract_data
 
     if verbose:
@@ -82,7 +82,7 @@ def fill_dict(start: int, end: int) -> dict:
     return dictionary
 
 # gets data type from command line arguments
-def get_data_type(arguments = True) -> str:
+def get_data_type(arguments: bool = True) -> str:
     if arguments:
         parser = argparse.ArgumentParser()
         parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
@@ -235,7 +235,7 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
             token_ids.append(trade["id"])
 
 # manage asks
-def manage_asks(verbose = True) -> list:
+def manage_asks(verbose: bool = True) -> list:
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
