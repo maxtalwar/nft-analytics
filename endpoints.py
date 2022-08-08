@@ -28,6 +28,7 @@ def get_floor_price(contract: str, key: str) -> json:
 
     return int(math.floor(response["collection"]["floorAsk"]["price"]))
 
+# gets bid on looksrare
 def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
     url = f'https://api.looksrare.org/api/v1/orders?isOrderAsk=false&collection={contract}&price%5Bmin%5D=1000000000000000000&status%5B%5D=VALID&pagination%5Bfirst%5D=150'
 
@@ -44,19 +45,6 @@ def get_looksrare_bids(contract: str, continuation=None, strategy=None) -> json:
     response = json.loads(requests.get(url, headers=headers).text)["data"]
 
     return response
-
-def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=None, bid_type="single") -> json:
-    if marketplace == "LooksRare":
-        if bid_type == "single":
-            bids = get_looksrare_bids(contract, continuation=continuation)
-        else:
-            bids = get_looksrare_bids(contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
-            print(bids)
-    else:
-        print("unsupported marketplace for bids")
-        quit()
-
-    return bids
 
 # gets open bids on a specific project (currently not working because of issue w/ reservoir API)
 def get_open_bids(contract: str, key: str, continuation=None) -> json:

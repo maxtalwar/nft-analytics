@@ -176,7 +176,7 @@ def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
             makers.append(maker)
 
 # converts trade JSON data to a trade object
-def parse_trades(trades: list) -> None:
+def parse_trades(trades: list, detailed_trades: list) -> None:
     for trade in trades:
         project_name = name_from_contract(Web3.toChecksumAddress(trade["token"]["contract"]))
         id = trade["token"]["tokenId"]
@@ -209,6 +209,7 @@ def parse_trades(trades: list) -> None:
 
             token_ids.append(trade["id"])
 
+# manage asks
 def manage_asks():
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
@@ -238,6 +239,7 @@ def manage_asks():
         print("\n")
         insert_data(detailed_asks, "ask")
 
+# manage bids
 def manage_bids():
     detailed_bids = []
     continuation = None
@@ -259,6 +261,20 @@ def manage_bids():
 
     insert_data(detailed_bids, "bid")
 
+# manage trades
+def manage_trades():
+    detailed_trades = []
+    continuation = None
+
+    for i in range(45):
+        trade_data = data.get_trades(contract, key, continuation)
+        trades = trade_data["trades"]
+        continuation = trade_data["continuation"]
+
+        parse_trades(trades, detailed_trades)
+
+    insert_data(detailed_trades, "trade")
+
 # instance variables
 contract = get_contract_address()
 target_marketplace = get_input_name()
@@ -279,15 +295,6 @@ if data_type == "bids":
 
 # pull and organize trade data
 if data_type == "trades":
-    detailed_trades = []
-
-    for i in range(45):
-        trade_data = data.get_trades(contract, key, continuation)
-        trades = trade_data["trades"]
-        continuation = trade_data["continuation"]
-
-        parse_trades(trades)
-
-    insert_data(detailed_trades, "trade")
+    manage_trades()
 
 print("data parsing complete")
