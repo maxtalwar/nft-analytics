@@ -164,7 +164,7 @@ def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
             bid_type = "collection"
 
         if bid["hash"] not in token_ids:
-            if bid_type == "single-token":
+            if bid_type == "single":
                 nft_id = bid["tokenId"]
             else:
                 nft_id = "N/A"
@@ -244,7 +244,7 @@ def manage_bids():
 
     # single bids
     for i in range(15):
-        single_bids = data.get_open_bids_v2(contract = contract, marketplace = target_marketplace, continuation = continuation, bid_type = "single")
+        single_bids = data.get_looksrare_bids(contract = contract, continuation = continuation)
         try:
             continuation = single_bids[-1]["hash"]
         except:

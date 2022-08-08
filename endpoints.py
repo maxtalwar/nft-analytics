@@ -58,7 +58,7 @@ def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=Non
 
     return bids
 
-# gets open bids on a specific project
+# gets open bids on a specific project (currently not working because of issue w/ reservoir API)
 def get_open_bids(contract: str, key: str, continuation=None) -> json:
     url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
 
