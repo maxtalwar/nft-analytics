@@ -1,4 +1,4 @@
-import requests, json, math, contracts
+import requests, json, math, contracts, sys
 
 # gets an API key from the reservoir.tools API
 def get_reservoir_api_key() -> json:
@@ -61,8 +61,7 @@ def get_open_bids(contract: str, key: str, continuation=None) -> json:
     try:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
-        print("504 Error: Gateway timeout")
-        quit()
+        sys.exit("504 Error: Gateway timeout")
 
     return {
         "bids": response["orders"],
@@ -84,8 +83,7 @@ def get_open_asks(contract: str, key: str, continuation=None) -> json:
     try:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
-        print("504 Error: Gateway timeout")
-        quit()
+        sys.exit("504 Error: Gateway timeout")
 
     return {
         "orders": response["orders"], 
@@ -107,8 +105,7 @@ def get_trades(contract: str, key: str, continuation=None):
     try:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
-        print("504 Error: Gateway timeout")
-        quit()
+        sys.exit("504 Error: Gateway timeout")
 
     return {
         "trades": response["sales"],

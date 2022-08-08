@@ -1,4 +1,4 @@
-import json, contracts, argparse, table_manager
+import json, contracts, argparse, table_manager, sys
 from collections import OrderedDict
 from data_models import Ask, Bid, Trade
 from web3 import Web3
@@ -28,15 +28,25 @@ def convert_marketplace_name(input: str) -> str:
 
     return conversions[input]
 
-# gets user input in compliance w/ reservoir.tools accepted marketplace names
-def get_input_name() -> str:
-    name = input("Exchange name (opensea, looksrare, x2y2): ")
+# process marketplace names
+def process_marketplace_names(marketplaces: list):
+    done = False
+    while not done:
+        try:
+            name = input("Exchange name (opensea, looksrare, x2y2): ")
+            done = (input("done [Y/n]: ") == "Y")
+            marketplaces.append(convert_marketplace_name(name))
+        except:
+            print("invalid exchange name entered")
+            return process_marketplace_names()
 
-    try:
-        return convert_marketplace_name(name)
-    except:
-        print("invalid exchange name entered")
-        return get_input_name()
+# gets user input in compliance w/ reservoir.tools accepted marketplace names
+def get_input_names() -> str:
+    marketplaces = []
+
+    process_marketplace_names(marketplaces)
+
+    return marketplaces
 
 # returns a project name from a contract address
 def name_from_contract(contract: str) -> str:
@@ -70,10 +80,11 @@ def fill_dict(start: int, end: int) -> dict:
     return dictionary
 
 # gets data type from command line arguments
-def get_data_type() -> str:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
-    args = parser.parse_args()
+def get_data_type(arguments = True) -> str:
+    if arguments:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
+        args = parser.parse_args()
 
     if args.data_type != None:
         choice = args.data_type
@@ -95,14 +106,16 @@ def get_data_type() -> str:
         "Trade":"trades",
         "trade":"trades",
         "trades":"trades",
-        "t":"trades"
+        "t":"trades",
+        "ask_distribution":"ask_distribution",
+        "ask-distribution":"ask_distribution"
     }
 
     try:
         return conversions[choice]
     except:
         print("invalid data type")
-        return get_data_type()
+        return get_data_type(arguments = False)
 
 # inserts data into table
 def insert_data(detailed_data, type):
@@ -110,8 +123,7 @@ def insert_data(detailed_data, type):
         try:
             table_manager.insert_order(detailed_piece_of_data, type)
         except:
-            print("writing data failed -- try resetting database file")
-            quit()
+            sys.exit("writing data failed -- try resetting database file")
 
 # converts ask JSON data to ask objects
 def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_price: int, max_price: int) -> None:
@@ -131,8 +143,7 @@ def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_pr
 
         value = int(round(price, 0))
 
-        if marketplace == target_marketplace and ask["tokenSetId"] not in token_ids and value >= min_price and value <= max_price: # only look at asks on the given marketplace that haven't been added yet below the max price
-            
+        if marketplace in target_marketplaces and ask["tokenSetId"] not in token_ids and value >= min_price and value <= max_price: # only look at asks on the given marketplace that haven't been added yet below the max price
             if value in marketplace_asks.keys(): # if the rounded value of the ask is already a key in the dict, increment it. Otherwise create a new key
                 marketplace_asks[value] += 1
             else:
@@ -200,14 +211,14 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
         except:
             fee = 0
 
-        if marketplace == target_marketplace and trade["id"] not in token_ids:
+        if marketplace in target_marketplaces and trade["id"] not in token_ids:
             parsed_trade = Trade(project_name, id, currency, price, marketplace, trade_timestamp, buyer, seller, "ETH", tx_id, offer_type, fee)
             detailed_trades.append(parsed_trade)
 
             token_ids.append(trade["id"])
 
 # manage asks
-def manage_asks(verbose = True):
+def manage_asks(verbose = True) -> list:
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
@@ -236,6 +247,22 @@ def manage_asks(verbose = True):
 
     if total == len(detailed_asks):
         insert_data(detailed_asks, "ask")
+
+    return detailed_asks
+
+# manage ask distribution
+def manage_ask_distribution() -> dict:
+    asks = manage_asks(verbose = False)
+    count = {}
+
+    for ask in asks:
+        if ask.marketplace in count.keys():
+            count[ask.marketplace] += 1
+        else:
+            count[ask.marketplace] = 1
+
+    print(count)
+    return count
 
 # manage bids
 def manage_bids() -> None:
@@ -275,9 +302,9 @@ def manage_trades() -> None:
 
 # instance variables
 contract = get_contract_address()
-target_marketplace = get_input_name()
-key = data.get_reservoir_api_key()
 data_type = get_data_type()
+target_marketplaces = get_input_names()
+key = data.get_reservoir_api_key()
 token_ids = []
 
 print("fetching data... \n")
@@ -285,6 +312,9 @@ print("fetching data... \n")
 # pull and organize ask data
 if data_type == "asks":
     manage_asks(verbose = False)
+
+if data_type == "ask_distribution":
+    manage_ask_distribution()
 
 # pull and organize bid data
 if data_type == "bids":
