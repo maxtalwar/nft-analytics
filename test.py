@@ -1,4 +1,4 @@
-import reservoir_tools_client_v2 as client
+import data_client as client
 import contracts
 
 """output = client.get_looksrare_single_bids(contracts.contract_data["BAYC"])
