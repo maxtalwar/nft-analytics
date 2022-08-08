@@ -5,13 +5,116 @@ from data_models import Ask, Bid, Trade
 import table_manager, math, os
 import argparse
 from web3 import Web3
-import data_endpoints as data
+import endpoints as data
 
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
     split = tokensetID.split(":", 2)
 
     return split[2]
+
+# converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
+def convert_marketplace_name(input: str) -> str:
+    OS = "OpenSea"
+    LR = "LooksRare"
+    X2 = "X2Y2"
+
+    conversions = {
+        "Opensea": OS,
+        "opensea": OS,
+        "seaport": OS,
+        "Looksrare": LR,
+        "looksrare": LR,
+        "looks-rare": LR,
+        "x2y2": X2
+    }
+
+    return conversions[input]
+
+# gets user input in compliance w/ reservoir.tools accepted marketplace names
+def get_input_name() -> str:
+    name = input("Exchange name (opensea, looksrare, x2y2): ")
+
+    try:
+        return convert_marketplace_name(name)
+    except:
+        print("invalid exchange name entered")
+        return get_input_name()
+
+# returns a project name from a contract address
+def name_from_contract(contract: str) -> str:
+    contract_to_name = {v: k for k, v in contracts.contract_data.items()}
+
+    return contract_to_name[contract]
+
+# gets project contract address from project name
+def get_contract_address(verbose = True) -> str:
+    contract_data = contracts.contract_data
+
+    if verbose:
+        print("Contracts")
+        for contract in contract_data.keys():
+            print(contract + ": " + contract_data[contract])
+
+    project_name = input("Project Name: ")
+
+    try:
+        return contract_data[project_name]
+    except:
+        print("invalid project name")
+        return get_contract_address(verbose = False)
+
+# fills the marketplace orders dict with the keys for the appropriate NFT prices
+def fill_dict(start: int, end: int) -> dict:
+    dictionary = {}
+    for i in range(start, end+1):
+        dictionary[i] = 0
+
+    return dictionary
+
+# gets data type from command line arguments
+def get_data_type() -> str:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
+    args = parser.parse_args()
+
+    if args.data_type != None:
+        choice = args.data_type
+    else:
+        choice = input("bid, ask, or trade data: ")
+
+    conversions = {
+        "Bids":"bids",
+        "Bid":"bids",
+        "bid":"bids",
+        "bids":"bids",
+        "b":"bids",
+        "Asks":"asks",
+        "Ask":"asks",
+        "asks":"asks",
+        "ask":"asks",
+        "a":"asks",
+        "Trades":"trades",
+        "Trade":"trades",
+        "trade":"trades",
+        "trades":"trades",
+        "t":"trades"
+    }
+
+    try:
+        return conversions[choice]
+    except:
+        print("invalid data type")
+        return get_data_type()
+
+# inserts data into table
+def insert_data(detailed_data, type):
+    for detailed_piece_of_data in detailed_data:
+        try:
+            table_manager.insert_order(detailed_piece_of_data, type)
+        except:
+            print("writing data failed -- try resetting database file")
+            os._exit()
 
 # converts ask JSON data to ask objects
 def parse_asks(orders: list) -> None:
@@ -105,109 +208,6 @@ def parse_trades(trades: list) -> None:
             detailed_trades.append(parsed_trade)
 
             token_ids.append(trade["id"])
-
-# converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
-def convert_marketplace_name(input: str) -> str:
-    OS = "OpenSea"
-    LR = "LooksRare"
-    X2 = "X2Y2"
-
-    conversions = {
-        "Opensea": OS,
-        "opensea": OS,
-        "seaport": OS,
-        "Looksrare": LR,
-        "looksrare": LR,
-        "looks-rare": LR,
-        "x2y2": X2
-    }
-
-    return conversions[input]
-
-# returns a project name from a contract address
-def name_from_contract(contract: str) -> str:
-    contract_to_name = {v: k for k, v in contracts.contract_data.items()}
-
-    return contract_to_name[contract]
-
-# gets user input in compliance w/ reservoir.tools accepted marketplace names
-def get_input_name() -> str:
-    name = input("Exchange name (opensea, looksrare, x2y2): ")
-
-    try:
-        return convert_marketplace_name(name)
-    except:
-        print("invalid exchange name entered")
-        return get_input_name()
-
-# gets project contract address from project name
-def get_contract_address(verbose = True) -> str:
-    contract_data = contracts.contract_data
-
-    if verbose:
-        print("Contracts")
-        for contract in contract_data.keys():
-            print(contract + ": " + contract_data[contract])
-
-    project_name = input("Project Name: ")
-
-    try:
-        return contract_data[project_name]
-    except:
-        print("invalid project name")
-        return get_contract_address(verbose = False)
-
-# fills the marketplace orders dict with the keys for the appropriate NFT prices
-def fill_dict(start: int, end: int) -> dict:
-    dictionary = {}
-    for i in range(start, end+1):
-        dictionary[i] = 0
-
-    return dictionary
-
-# gets data type from command line arguments
-def get_data_type() -> str:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
-    args = parser.parse_args()
-
-    if args.data_type != None:
-        choice = args.data_type
-    else:
-        choice = input("bid, ask, or trade data: ")
-
-    conversions = {
-        "Bids":"bids",
-        "Bid":"bids",
-        "bid":"bids",
-        "bids":"bids",
-        "b":"bids",
-        "Asks":"asks",
-        "Ask":"asks",
-        "asks":"asks",
-        "ask":"asks",
-        "a":"asks",
-        "Trades":"trades",
-        "Trade":"trades",
-        "trade":"trades",
-        "trades":"trades",
-        "t":"trades"
-    }
-
-    try:
-        return conversions[choice]
-    except:
-        print("invalid data type")
-        return get_data_type()
-
-# inserts data into table
-def insert_data(detailed_data, type):
-    for detailed_piece_of_data in detailed_data:
-        try:
-            table_manager.insert_order(detailed_piece_of_data, type)
-        except:
-            print("writing data failed -- try resetting database file")
-            os._exit()
 
 # instance variables
 contract = get_contract_address()
