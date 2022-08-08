@@ -129,6 +129,7 @@ def insert_data(detailed_data: list, type: str) -> None:
 
 # creates a bar chart
 def bar_chart(marketplace_listings: dict) -> None:
+    project = name_from_contract(contract)
     marketplaces = list(marketplace_listings.keys())
     listings = list(marketplace_listings.values())
 
@@ -137,7 +138,7 @@ def bar_chart(marketplace_listings: dict) -> None:
     plt.bar(marketplaces, listings)
     plt.xlabel("Marketplace")
     plt.ylabel("# of Listings")
-    plt.title("# of Listings Across Exchanges")
+    plt.title(f"# of Listings for {project} Across Marketplaces")
 
     st.pyplot(figure)
 
@@ -277,7 +278,11 @@ def manage_ask_distribution() -> dict:
         else:
             count[ask.marketplace] = 1
 
+    count = {k: v for k, v in sorted(count.items(), key=lambda item: item[1])}
+
     bar_chart(count)
+
+    print(count)
 
     return count
 
@@ -308,7 +313,7 @@ def manage_trades() -> None:
     detailed_trades = []
     continuation = None
 
-    for i in range(45):
+    for i in range(15):
         trade_data = data.get_trades(contract, key, continuation)
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
