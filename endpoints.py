@@ -54,7 +54,7 @@ def get_open_bids_v2(contract: str, marketplace: str, key=None, continuation=Non
             print(bids)
     else:
         print("unsupported marketplace for bids")
-        os._exit()
+        quit()
 
     return bids
 
@@ -74,7 +74,7 @@ def get_open_bids(contract: str, key: str, continuation=None) -> json:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
         print("504 Error: Gateway timeout")
-        os._exit()
+        quit()
 
     return {
         "bids": response["orders"],
@@ -120,7 +120,7 @@ def get_trades(contract: str, key: str, continuation=None):
         response = json.loads(requests.get(url, headers=headers).text)
     except:
         print("504 Error: Gateway timeout")
-        os._exit()
+        quit()
 
     return {
         "trades": response["sales"],

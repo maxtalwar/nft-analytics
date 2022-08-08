@@ -147,7 +147,7 @@ def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_pr
             token_ids.append(ask["tokenSetId"])
 
 # converts bid JSON data to bid objects
-def parse_looksrare_bids(bids: list) -> None:
+def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
     makers = []
     for bid in bids:
         marketplace = "LooksRare"
@@ -238,6 +238,27 @@ def manage_asks():
         print("\n")
         insert_data(detailed_asks, "ask")
 
+def manage_bids():
+    detailed_bids = []
+    continuation = None
+
+    # single bids
+    for i in range(15):
+        single_bids = data.get_open_bids_v2(contract = contract, marketplace = target_marketplace, continuation = continuation, bid_type = "single")
+        try:
+            continuation = single_bids[-1]["hash"]
+        except:
+            continuation = None
+
+        parse_looksrare_bids(single_bids, detailed_bids = detailed_bids)
+
+    # collection bids
+    for i in range(15):
+        collection_bids = data.get_looksrare_bids(contract = contract, strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
+        parse_looksrare_bids(collection_bids, detailed_bids = detailed_bids)
+
+    insert_data(detailed_bids, "bid")
+
 # instance variables
 contract = get_contract_address()
 target_marketplace = get_input_name()
@@ -254,23 +275,7 @@ if data_type == "asks":
 
 # pull and organize bid data
 if data_type == "bids":
-    detailed_bids = []
-
-    for i in range(15):
-        single_bids = data.get_open_bids_v2(contract = contract, marketplace = target_marketplace, continuation = continuation, bid_type = "single")
-        try:
-            continuation = single_bids[-1]["hash"]
-        except:
-            continuation = None
-
-        parse_looksrare_bids(single_bids)
-
-    for i in range(15):
-        collection_bids = data.get_looksrare_bids(contract = contract, strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
-
-        parse_looksrare_bids(collection_bids)
-
-    insert_data(detailed_bids, "bid")
+    manage_bids()
 
 # pull and organize trade data
 if data_type == "trades":
