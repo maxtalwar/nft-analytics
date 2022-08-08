@@ -30,11 +30,11 @@ def convert_marketplace_name(input: str) -> str:
 
 # process marketplace names
 def process_marketplace_names(marketplaces: list):
-    done = False
-    while not done:
+    adding_more = True
+    while adding_more:
         try:
             name = input("Exchange name (opensea, looksrare, x2y2): ")
-            done = (input("done [Y/n]: ") == "Y")
+            adding_more = (input("add another marketplace? [Y/n]: ") == "Y")
             marketplaces.append(convert_marketplace_name(name))
         except:
             print("invalid exchange name entered")
