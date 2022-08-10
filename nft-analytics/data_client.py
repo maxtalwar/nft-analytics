@@ -144,7 +144,7 @@ def bar_chart(marketplace_listings: dict) -> None:
     st.pyplot(figure)
 
 # gets storage and output preferences
-def get_data_preferences():
+def get_data_preferences() -> json:
     if data_type == "ask_distribution":
         verbose = False
         storage_preferences = True
@@ -373,6 +373,6 @@ if data_type == "bids":
 
 # pull and organize trade data
 if data_type == "trades":
-    manage_trades(verbose = True)
+    manage_trades()
 
 print("\ndata parsing complete")
