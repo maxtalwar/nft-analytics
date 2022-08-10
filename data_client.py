@@ -266,7 +266,7 @@ def manage_asks(verbose: bool = True) -> list:
             print(str(value) + ":" + str(marketplace_asks[value]))
         total += marketplace_asks[value]
 
-    if total == len(detailed_asks):
+    if total == len(detailed_asks) and store_data:
         insert_data(detailed_asks, "ask")
 
     return detailed_asks
