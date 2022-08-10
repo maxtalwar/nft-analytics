@@ -244,6 +244,9 @@ def manage_asks(verbose: bool = True) -> list:
     continuation = None
     total = 0
 
+    store_data = (input("Store ask data in .db file? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Output ask data? [Y/n]: ") == "Y")
+
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
         asks = data.get_open_asks(contract, key, continuation)
@@ -316,7 +319,7 @@ def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
     continuation = None
 
     store_data = (input("Store trade data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Print trade data? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Output trade data? [Y/n]: ") == "Y")
 
     for i in range(15):
         trade_data = data.get_trades(contract, key, continuation)
