@@ -245,7 +245,7 @@ def manage_asks(verbose: bool = True) -> list:
     total = 0
 
     store_data = (input("Store ask data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Output ask data? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
@@ -296,6 +296,9 @@ def manage_bids() -> None:
     detailed_bids = []
     continuation = None
 
+    store_data = (input("Store bid data in .db file? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
+
     # single bids
     for i in range(15):
         single_bids = data.get_looksrare_bids(contract = contract, continuation = continuation)
@@ -311,7 +314,12 @@ def manage_bids() -> None:
         collection_bids = data.get_looksrare_bids(contract = contract, strategy = "0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3")
         parse_looksrare_bids(collection_bids, detailed_bids = detailed_bids)
 
-    insert_data(detailed_bids, "bid")
+    if store_data:
+        insert_data(detailed_bids, "bid")
+
+    if verbose:
+        for bid in detailed_bids:
+            print(f"Marketplace: {bid.marketplace}\n Project: {bid.project_name}\n Currency: {bid.currency}\n Value: {bid.value}\n Created At: {bid.created_at}\n NFT ID: {bid.nft_id}\n Bid Type: {bid.bid_type}\n")
 
 # manage trades
 def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
@@ -319,7 +327,7 @@ def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
     continuation = None
 
     store_data = (input("Store trade data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Output trade data? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
 
     for i in range(15):
         trade_data = data.get_trades(contract, key, continuation)
