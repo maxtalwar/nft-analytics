@@ -91,7 +91,7 @@ def get_data_type(arguments: bool = True) -> str:
     if args.data_type != None:
         choice = args.data_type
     else:
-        choice = input("ask, ask_distribution, bid, or trade data: ")
+        choice = input("ask, ask distribution, bid, or trade data: ")
 
     conversions = {
         "Bids":"bids",
@@ -110,7 +110,8 @@ def get_data_type(arguments: bool = True) -> str:
         "trades":"trades",
         "t":"trades",
         "ask_distribution":"ask_distribution",
-        "ask-distribution":"ask_distribution"
+        "ask-distribution":"ask_distribution",
+        "ask distribution": "ask_distribution"
     }
 
     try:
@@ -253,7 +254,7 @@ def manage_asks(verbose: bool = True) -> list:
 
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
-    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc
+    # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc and store it in a .db file 
     if verbose:
         print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
@@ -268,7 +269,7 @@ def manage_asks(verbose: bool = True) -> list:
     return detailed_asks
 
 # manage ask distribution
-def manage_ask_distribution() -> dict:
+def manage_ask_distribution(bar_chart = True) -> dict:
     asks = manage_asks(verbose = False)
     count = {}
 
@@ -280,9 +281,10 @@ def manage_ask_distribution() -> dict:
 
     count = {k: v for k, v in sorted(count.items(), key=lambda item: item[1])}
 
-    bar_chart(count)
-
     print(count)
+
+    if bar_chart:
+        bar_chart(count)
 
     return count
 
@@ -309,9 +311,12 @@ def manage_bids() -> None:
     insert_data(detailed_bids, "bid")
 
 # manage trades
-def manage_trades() -> None:
+def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
     detailed_trades = []
     continuation = None
+
+    store_data = (input("Store trade data in .db file? [Y/n]: ") == "Y")
+    verbose = True if not store_data else (input("Print trade data? [Y/n]: ") == "Y")
 
     for i in range(15):
         trade_data = data.get_trades(contract, key, continuation)
@@ -320,12 +325,18 @@ def manage_trades() -> None:
 
         parse_trades(trades, detailed_trades)
 
-    insert_data(detailed_trades, "trade")
+    if store_data:
+        insert_data(detailed_trades, "trade")
+
+    if verbose:
+        for trade in detailed_trades:
+            print(f"Marketplace: {trade.marketplace} \n Project: {trade.project_name} \n Currency: {trade.currency} \n Value: {trade.value} \n Created At: {trade.timestamp} \n")
+    
 
 # instance variables
 contract = get_contract_address()
-data_type = get_data_type()
 target_marketplaces = get_input_names()
+data_type = get_data_type()
 key = data.get_reservoir_api_key()
 token_ids = []
 
@@ -345,6 +356,6 @@ if data_type == "bids":
 
 # pull and organize trade data
 if data_type == "trades":
-    manage_trades()
+    manage_trades(verbose = True)
 
-print("data parsing complete")
+print("\ndata parsing complete")
