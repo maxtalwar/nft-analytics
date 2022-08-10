@@ -236,16 +236,13 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
             token_ids.append(trade["id"])
 
 # manage asks
-def manage_asks(verbose: bool = True) -> list:
+def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -> list:
     min_price = data.get_floor_price(contract, key)
     max_price = min_price*3
     marketplace_asks = fill_dict(min_price, max_price)
     detailed_asks = []
     continuation = None
     total = 0
-
-    store_data = (input("Store ask data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
@@ -322,12 +319,9 @@ def manage_bids() -> None:
             print(f"Marketplace: {bid.marketplace}\n Project: {bid.project_name}\n Currency: {bid.currency}\n Value: {bid.value}\n Created At: {bid.created_at}\n NFT ID: {bid.nft_id}\n Bid Type: {bid.bid_type}\n")
 
 # manage trades
-def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
+def manage_trades(verbose: bool = False, store_data: bool = True, key: str = data.get_reservoir_api_key()) -> None:
     detailed_trades = []
     continuation = None
-
-    store_data = (input("Store trade data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
 
     for i in range(15):
         trade_data = data.get_trades(contract, key, continuation)
@@ -348,10 +342,11 @@ def manage_trades(verbose: bool = False, store_data: bool = True) -> None:
 contract = get_contract_address()
 target_marketplaces = get_input_names()
 data_type = get_data_type()
-key = data.get_reservoir_api_key()
+store_data = (input("Store data in .db file? [Y/n]: ") == "Y")
+verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
 token_ids = []
 
-print("fetching data... \n")
+print("fetching data...\n")
 
 # pull and organize ask data
 if data_type == "asks":
