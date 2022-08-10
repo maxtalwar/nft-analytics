@@ -143,8 +143,22 @@ def bar_chart(marketplace_listings: dict) -> None:
 
     st.pyplot(figure)
 
+# gets storage and output preferences
+def get_data_preferences():
+    if data_type == "ask_distribution":
+        verbose = False
+        storage_preferences = True
+    else:
+        storage_preferences = (input("Store data in .db file? [Y/n]: ") == "Y")
+        verbose = True if not storage_preferences else (input("Output data to CLI? [Y/n]: ") == "Y")
+
+    return {
+        "storage_preferences": storage_preferences,
+        "verbose": verbose
+    }
+
 # converts ask JSON data to ask objects
-def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_price: int, max_price: int) -> None:
+def parse_asks(orders: list, ask_count: dict, marketplace_asks: json, detailed_asks: list, min_price: int, max_price: int) -> None:
     for ask in orders:
         try:
             marketplace = ask["source"]["name"]
@@ -161,16 +175,18 @@ def parse_asks(orders: list, marketplace_asks: json, detailed_asks: list, min_pr
 
         value = int(round(price, 0))
 
-        if marketplace in target_marketplaces and ask["tokenSetId"] not in token_ids and value >= min_price and value <= max_price: # only look at asks on the given marketplace that haven't been added yet below the max price
-            if value in marketplace_asks.keys(): # if the rounded value of the ask is already a key in the dict, increment it. Otherwise create a new key
-                marketplace_asks[value] += 1
-            else:
-                marketplace_asks[value] = 1
+        if marketplace in target_marketplaces:
+            ask_count[marketplace] += 1
+            if ask["tokenSetId"] not in token_ids and value >= min_price and value <= max_price: # only look at asks on the given marketplace that haven't been added yet below the max price
+                if value in marketplace_asks.keys(): # if the rounded value of the ask is already a key in the dict, increment it. Otherwise create a new key
+                    marketplace_asks[value] += 1
+                else:
+                    marketplace_asks[value] = 1
 
-            order = Ask(project_name, nft_id, currency, price, marketplace, created_at, expires_on, maker, "ETH")
-            detailed_asks.append(order)
-            
-            token_ids.append(ask["tokenSetId"])
+                order = Ask(project_name, nft_id, currency, price, marketplace, created_at, expires_on, maker, "ETH")
+                detailed_asks.append(order)
+                
+                token_ids.append(ask["tokenSetId"])
 
 # converts bid JSON data to bid objects
 def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
@@ -250,7 +266,7 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -
         orders = asks["orders"]
         continuation = asks["continuation"]
 
-        parse_asks(orders, marketplace_asks = marketplace_asks, detailed_asks = detailed_asks, min_price = min_price, max_price = max_price)
+        parse_asks(orders, ask_count, marketplace_asks = marketplace_asks, detailed_asks = detailed_asks, min_price = min_price, max_price = max_price)
 
     marketplace_asks = dict(OrderedDict(sorted(marketplace_asks.items()))) # sort the orderbook by price
 
@@ -266,27 +282,23 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -
     if total == len(detailed_asks) and store_data:
         insert_data(detailed_asks, "ask")
 
+    print(f"\n{ask_count}")
+
     return detailed_asks
 
 # manage ask distribution
-def manage_ask_distribution(bar_chart = True) -> dict:
-    asks = manage_asks(verbose = False)
-    count = {}
+def manage_ask_distribution(create_bar_chart = True) -> dict:
+    manage_asks(verbose = False)
+    parsed_ask_count = {}
 
-    for ask in asks:
-        if ask.marketplace in count.keys():
-            count[ask.marketplace] += 1
-        else:
-            count[ask.marketplace] = 1
+    for key in ask_count.keys():
+        if key in target_marketplaces:
+            parsed_ask_count[key] = ask_count[key]
 
-    count = {k: v for k, v in sorted(count.items(), key=lambda item: item[1])}
+    if create_bar_chart:
+        bar_chart(parsed_ask_count)
 
-    print(count)
-
-    if bar_chart:
-        bar_chart(count)
-
-    return count
+    return parsed_ask_count
 
 # manage bids
 def manage_bids() -> None:
@@ -342,8 +354,10 @@ def manage_trades(verbose: bool = False, store_data: bool = True, key: str = dat
 contract = get_contract_address()
 target_marketplaces = get_input_names()
 data_type = get_data_type()
-store_data = (input("Store data in .db file? [Y/n]: ") == "Y")
-verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
+data_preferences = get_data_preferences()
+store_data = data_preferences["storage_preferences"]
+verbose = data_preferences["verbose"]
+ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
 token_ids = []
 
 print("fetching data...\n")

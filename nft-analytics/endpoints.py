@@ -84,6 +84,7 @@ def get_open_asks(contract: str, key: str, continuation: str = None) -> json:
         response = json.loads(requests.get(url, headers=headers).text)
     except:
         time.sleep(15)
+        key = get_reservoir_api_key()
         return get_open_asks(contract, key, continuation)
 
 
