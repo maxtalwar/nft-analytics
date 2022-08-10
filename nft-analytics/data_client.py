@@ -305,9 +305,6 @@ def manage_bids() -> None:
     detailed_bids = []
     continuation = None
 
-    store_data = (input("Store bid data in .db file? [Y/n]: ") == "Y")
-    verbose = True if not store_data else (input("Output data to CLI? [Y/n]: ") == "Y")
-
     # single bids
     for i in range(15):
         single_bids = data.get_looksrare_bids(contract = contract, continuation = continuation)
@@ -364,7 +361,7 @@ print("fetching data...\n")
 
 # pull and organize ask data
 if data_type == "asks":
-    manage_asks(verbose = False)
+    manage_asks()
 
 # pull and organize ask distribution data
 if data_type == "ask_distribution":
