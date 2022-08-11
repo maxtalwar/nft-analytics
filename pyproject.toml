@@ -1,17 +1,17 @@
 [tool.poetry]
 name = "nft-analytics"
 version = "0.1.0"
-description = "NFT analytics tools"
+description = "NFT analytics tool"
 authors = ["0xphoton <42502920+0xphoton@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-matplotlib = "3.4.3"
-requests = "2.28.1"
-SQLAlchemy = "1.4.39"
-streamlit = "1.11.1"
-web3 = "5.30.0"
+matplotlib = "^3.5.3"
+requests = "^2.28.1"
+SQLAlchemy = "^1.4.40"
+streamlit = "^1.11.1"
 watchdog = "^2.1.9"
+web3 = "^5.30.0"
 
 [tool.poetry.dev-dependencies]
 
