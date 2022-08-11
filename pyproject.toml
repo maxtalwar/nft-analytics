@@ -12,6 +12,7 @@ SQLAlchemy = "^1.4.40"
 streamlit = "^1.11.1"
 watchdog = "^2.1.9"
 web3 = "^5.30.0"
+black = "^22.6.0"
 
 [tool.poetry.dev-dependencies]
 
