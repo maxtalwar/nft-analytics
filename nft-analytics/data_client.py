@@ -13,10 +13,13 @@ def parse_nft_id(tokensetID: str) -> str:
     return split[2]
 
 # converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
-def convert_marketplace_name(input: str) -> str:
+def convert_marketplace_name(marketplace: str = None) -> str:
     OS = "OpenSea"
     LR = "LooksRare"
     X2 = "X2Y2"
+
+    if input == None:
+        marketplace = input("Exchange name (opensea, looksrare, x2y2): ")
 
     conversions = {
         "Opensea": OS,
@@ -28,19 +31,27 @@ def convert_marketplace_name(input: str) -> str:
         "x2y2": X2
     }
 
-    return conversions[input]
+    try:
+        return conversions[marketplace]
+    except:
+        print("invalid marketplace name")
+        return convert_marketplace_name()
 
 # process marketplace names
-def process_marketplace_names(marketplaces: list):
-    adding_more = True
+def process_marketplace_names(marketplaces: list) -> list:
+    if len(marketplaces) != 0:
+        for i in range(len(marketplaces)):
+            marketplaces[i] = convert_marketplace_name(marketplaces[i])
+
+        adding_more = (input("add another marketplace? [Y/n]: ") == "Y")
+    else:
+        adding_more = True
+    
     while adding_more:
-        try:
-            name = input("Exchange name (opensea, looksrare, x2y2): ")
-            adding_more = (input("add another marketplace? [Y/n]: ") == "Y")
-            marketplaces.append(convert_marketplace_name(name))
-        except:
-            print("invalid exchange name entered")
-            return process_marketplace_names()
+        marketplaces.append(convert_marketplace_name())
+        adding_more = (input("add another marketplace? [Y/n]: ") == "Y")
+
+    return marketplaces
 
 # gets user input in compliance w/ reservoir.tools accepted marketplace names
 def get_input_names() -> str:
@@ -57,7 +68,10 @@ def name_from_contract(contract: str) -> str:
     return contract_to_name[contract]
 
 # gets project contract address from project name
-def get_contract_address(verbose: bool = True) -> str:
+def get_contract_address(verbose: bool = True, collection: str = None) -> str:
+    if collection == None:
+        collection = input("Project Name: ")
+    
     contract_data = contracts.contract_data
 
     if verbose:
@@ -65,10 +79,8 @@ def get_contract_address(verbose: bool = True) -> str:
         for contract in contract_data.keys():
             print(contract + ": " + contract_data[contract])
 
-    project_name = input("Project Name: ")
-
     try:
-        return contract_data[project_name]
+        return contract_data[collection]
     except:
         print("invalid project name")
         return get_contract_address(verbose = False)
@@ -82,15 +94,8 @@ def fill_dict(start: int, end: int) -> dict:
     return dictionary
 
 # gets data type from command line arguments
-def get_data_type(arguments: bool = True) -> str:
-    if arguments:
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--data_type', dest='data_type', type=str, help='data type to get data about')
-        args = parser.parse_args()
-
-    if args.data_type != None:
-        choice = args.data_type
-    else:
+def get_data_type(choice: str = None) -> str:
+    if choice == None:
         choice = input("ask, ask distribution, bid, or trade data: ")
 
     conversions = {
@@ -119,6 +124,19 @@ def get_data_type(arguments: bool = True) -> str:
     except:
         print("invalid data type")
         return get_data_type(arguments = False)
+
+def get_configs():
+    parser = argparse.ArgumentParser("Provide information about the data you want to query")
+    parser.add_argument('--collection', dest='collection', type=str, help='[Cryptopunks, Moonbirds, Otherdeed, Goblintown, BAYC, MAYC, CloneX, Meebits, Doodles, Azuki, Veefriends]')
+    parser.add_argument('--data_type', dest='data_type', type=str, help='asks, bids, trades, and ask distribution')
+    parser.add_argument('--marketplaces', dest='marketplaces', type=str, help='marketplace/marketplaces to process data for. Opensea, Looksrare, and X2Y2 supported. ')
+    args = parser.parse_args()
+
+    args.contract_address = get_contract_address(verbose = False, collection = args.collection)
+    args.data_type = get_data_type(args.data_type)
+    args.marketplace = process_marketplace_names(args.marketplaces)
+
+    return args
 
 # inserts data into table
 def insert_data(detailed_data: list, type: str) -> None:
@@ -345,12 +363,12 @@ def manage_trades(verbose: bool = False, store_data: bool = True, key: str = dat
     if verbose:
         for trade in detailed_trades:
             print(f"Marketplace: {trade.marketplace} \n Project: {trade.project_name} \n Currency: {trade.currency} \n Value: {trade.value} \n Created At: {trade.timestamp} \n")
-    
 
 # instance variables
+configs = get_configs()
 contract = get_contract_address()
-target_marketplaces = get_input_names()
 data_type = get_data_type()
+target_marketplaces = get_input_names()
 data_preferences = get_data_preferences()
 store_data = data_preferences["storage_preferences"]
 verbose = data_preferences["verbose"]
@@ -374,5 +392,3 @@ if data_type == "bids":
 # pull and organize trade data
 if data_type == "trades":
     manage_trades()
-
-print("\ndata parsing complete")
