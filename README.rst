@@ -13,7 +13,7 @@ In this field, enter the name of the collection that you want to get data for. T
 - Meebits
 - Doodles
 - Azuki
-- Veefriends
+- Veefriends -
 Only these specific names will be accepted. 
 
 Data Type
