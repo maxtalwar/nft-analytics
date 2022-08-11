@@ -19,7 +19,7 @@ def convert_marketplace_name(marketplace: str = None) -> str:
     X2 = "X2Y2"
 
     if marketplace == None:
-        marketplace = input("Exchange name (opensea, looksrare, x2y2): ")
+        marketplace = input("Marketplace name (opensea, looksrare, x2y2): ")
 
     conversions = {
         "Opensea": OS,
@@ -39,7 +39,10 @@ def convert_marketplace_name(marketplace: str = None) -> str:
         return convert_marketplace_name()
 
 # process marketplace names
-def process_marketplace_names(marketplaces: list) -> list:
+def process_marketplace_names(marketplaces: list = []) -> list:
+    if marketplaces == None:
+        marketplaces = []
+    
     if len(marketplaces) != 0:
         for i in range(len(marketplaces)):
             marketplaces[i] = convert_marketplace_name(marketplaces[i])
@@ -78,12 +81,12 @@ def get_contract_address(verbose: bool = True, collection: str = None) -> str:
             print(contract + ": " + contract_data[contract])
 
     if collection == None:
-        collection = input("Project Name: ")
+        collection = input("Collection Name [Cryptopunks, Moonbirds, Otherdeed, Goblintown, BAYC, MAYC, CloneX, Meebits, Doodles, Azuki, Veefriends]: ")
 
     try:
         return contract_data[collection]
     except:
-        print("invalid project name")
+        print("invalid collection name")
         return get_contract_address(verbose = False)
 
 # fills the marketplace orders dict with the keys for the appropriate NFT prices
@@ -117,7 +120,8 @@ def get_data_type(choice: str = None) -> str:
         "t":"trades",
         "ask_distribution":"ask_distribution",
         "ask-distribution":"ask_distribution",
-        "ask distribution": "ask_distribution"
+        "ask distribution": "ask_distribution",
+        "ask distributions": "ask_distribution"
     }
 
     try:
