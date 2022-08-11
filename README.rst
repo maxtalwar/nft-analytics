@@ -1,5 +1,3 @@
-Usage
-
 You will initially be prompted about the following information:
 
 Collection Name
