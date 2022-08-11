@@ -18,7 +18,7 @@ def convert_marketplace_name(marketplace: str = None) -> str:
     LR = "LooksRare"
     X2 = "X2Y2"
 
-    if input == None:
+    if marketplace == None:
         marketplace = input("Exchange name (opensea, looksrare, x2y2): ")
 
     conversions = {
@@ -35,6 +35,7 @@ def convert_marketplace_name(marketplace: str = None) -> str:
         return conversions[marketplace]
     except:
         print("invalid marketplace name")
+        print(marketplace)
         return convert_marketplace_name()
 
 # process marketplace names
@@ -69,15 +70,15 @@ def name_from_contract(contract: str) -> str:
 
 # gets project contract address from project name
 def get_contract_address(verbose: bool = True, collection: str = None) -> str:
-    if collection == None:
-        collection = input("Project Name: ")
-    
     contract_data = contracts.contract_data
 
     if verbose:
         print("Contracts")
         for contract in contract_data.keys():
             print(contract + ": " + contract_data[contract])
+
+    if collection == None:
+        collection = input("Project Name: ")
 
     try:
         return contract_data[collection]
@@ -129,12 +130,18 @@ def get_configs():
     parser = argparse.ArgumentParser("Provide information about the data you want to query")
     parser.add_argument('--collection', dest='collection', type=str, help='[Cryptopunks, Moonbirds, Otherdeed, Goblintown, BAYC, MAYC, CloneX, Meebits, Doodles, Azuki, Veefriends]')
     parser.add_argument('--data_type', dest='data_type', type=str, help='asks, bids, trades, and ask distribution')
-    parser.add_argument('--marketplaces', dest='marketplaces', type=str, help='marketplace/marketplaces to process data for. Opensea, Looksrare, and X2Y2 supported. ')
+    parser.add_argument('--marketplaces', dest='marketplaces', type=str, nargs="+", help='marketplace[s] to process data for. Opensea, Looksrare, and X2Y2 supported. ')
+    parser.add_argument('--store_data', dest='store_data', type=bool, help='Choose whether to store data on .db file. (True, False)')
+    parser.add_argument('--verbose', dest='verbose', type=bool, help='Choose whether scraped data is displayed on CLI (True, False)')
     args = parser.parse_args()
 
     args.contract_address = get_contract_address(verbose = False, collection = args.collection)
     args.data_type = get_data_type(args.data_type)
     args.marketplace = process_marketplace_names(args.marketplaces)
+
+    data_management_configs = get_data_preferences(store_data = args.store_data, verbose = args.verbose, data_type = args.data_type)
+    args.store_data = data_management_configs["storage_preferences"]
+    args.verbose = data_management_configs["verbose"]
 
     return args
 
@@ -162,16 +169,20 @@ def bar_chart(marketplace_listings: dict) -> None:
     st.pyplot(figure)
 
 # gets storage and output preferences
-def get_data_preferences() -> json:
+def get_data_preferences(store_data: bool = None, verbose: bool = None, data_type: bool = None) -> json:
     if data_type == "ask_distribution":
         verbose = False
-        storage_preferences = True
+        store_data = True
     else:
-        storage_preferences = (input("Store data in .db file? [Y/n]: ") == "Y")
-        verbose = True if not storage_preferences else (input("Output data to CLI? [Y/n]: ") == "Y")
-
+        if store_data == None:
+            store_data = (input("Store data in .db file? [Y/n]: ") == "Y")
+        if not store_data:
+            verbose = True
+        elif verbose == None:
+            verbose = input("Output data to CLI? [Y/n]: ") == "Y"
+        
     return {
-        "storage_preferences": storage_preferences,
+        "storage_preferences": store_data,
         "verbose": verbose
     }
 
@@ -346,7 +357,7 @@ def manage_bids() -> None:
             print(f"Marketplace: {bid.marketplace}\n Project: {bid.project_name}\n Currency: {bid.currency}\n Value: {bid.value}\n Created At: {bid.created_at}\n NFT ID: {bid.nft_id}\n Bid Type: {bid.bid_type}\n")
 
 # manage trades
-def manage_trades(verbose: bool = False, store_data: bool = True, key: str = data.get_reservoir_api_key()) -> None:
+def manage_trades(store_data: bool = True, key: str = data.get_reservoir_api_key()) -> None:
     detailed_trades = []
     continuation = None
 
@@ -366,12 +377,11 @@ def manage_trades(verbose: bool = False, store_data: bool = True, key: str = dat
 
 # instance variables
 configs = get_configs()
-contract = get_contract_address()
-data_type = get_data_type()
-target_marketplaces = get_input_names()
-data_preferences = get_data_preferences()
-store_data = data_preferences["storage_preferences"]
-verbose = data_preferences["verbose"]
+contract = configs.contract_address
+data_type = configs.data_type
+target_marketplaces = configs.marketplace
+store_data = configs.store_data
+verbose = configs.verbose
 ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
 token_ids = []
 

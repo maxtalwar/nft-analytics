@@ -13,8 +13,9 @@ def get_reservoir_api_key() -> json:
 
     response = requests.post(url, data=payload, headers=headers)
 
+    # backup key: "9240bc7c-a6a7-5657-9619-b1f6dbb6d065"
     return json.loads(response.text)["key"]
-
+    
 # gets the floor price for a specific project
 def get_floor_price(contract: str, key: str) -> json:
     url = f"https://api.reservoir.tools/collection/v3?id={contract}&includeTopBid=false"
