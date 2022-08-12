@@ -5,6 +5,7 @@ from web3 import Web3
 import endpoints as data
 import streamlit as st
 import matplotlib.pyplot as plt
+from operator import itemgetter
 
 # parse nft id from a longer string
 def parse_nft_id(tokensetID: str) -> str:
@@ -41,9 +42,13 @@ def convert_marketplace_name(marketplace: str = None) -> str:
 
 
 # process marketplace names
-def process_marketplace_names(marketplaces: list = []) -> list:
+def process_marketplace_names(marketplaces: list = [], data_type: list = None) -> list:
     if marketplaces == None:
         marketplaces = []
+
+    if data_type == "arbitrage":
+        marketplaces = ["OpenSea", "LooksRare", "X2Y2"]
+        return marketplaces
 
     if len(marketplaces) != 0:
         for i in range(len(marketplaces)):
@@ -56,15 +61,6 @@ def process_marketplace_names(marketplaces: list = []) -> list:
     while adding_more:
         marketplaces.append(convert_marketplace_name())
         adding_more = input("add another marketplace? [Y/n]: ") == "Y"
-
-    return marketplaces
-
-
-# gets user input in compliance w/ reservoir.tools accepted marketplace names
-def get_input_names() -> str:
-    marketplaces = []
-
-    process_marketplace_names(marketplaces)
 
     return marketplaces
 
@@ -131,6 +127,10 @@ def get_data_type(choice: str = None) -> str:
         "ask-distribution": "ask_distribution",
         "ask distribution": "ask_distribution",
         "ask distributions": "ask_distribution",
+        "Arbitrage": "arbitrage",
+        "arbitrage": "arbitrage",
+        "arbitrage opportunities": "arbitrage",
+        "Arbitrage opportunities": "arbitrage",
     }
 
     try:
@@ -154,7 +154,7 @@ def get_configs():
         "--data_type",
         dest="data_type",
         type=str,
-        help="asks, bids, trades, and ask distribution",
+        help="options: [asks, bids, trades, ask distribution, arbitrage]",
     )
     parser.add_argument(
         "--marketplaces",
@@ -181,7 +181,7 @@ def get_configs():
         verbose=False, collection=args.collection
     )
     args.data_type = get_data_type(args.data_type)
-    args.marketplace = process_marketplace_names(args.marketplaces)
+    args.marketplaces = process_marketplace_names(args.marketplaces, args.data_type)
 
     data_management_configs = get_data_preferences(
         store_data=args.store_data, verbose=args.verbose, data_type=args.data_type
@@ -224,6 +224,9 @@ def get_data_preferences(
     if data_type == "ask_distribution":
         verbose = False
         store_data = True
+    elif data_type == "arbitrage":
+        verbose = False
+        store_data = False
     else:
         if store_data == None:
             store_data = input("Store data in .db file? [Y/n]: ") == "Y"
@@ -441,7 +444,7 @@ def manage_ask_distribution(create_bar_chart=True) -> dict:
 
 
 # manage bids
-def manage_bids() -> None:
+def manage_bids() -> list:
     detailed_bids = []
     continuation = None
 
@@ -473,6 +476,103 @@ def manage_bids() -> None:
                 f"Marketplace: {bid.marketplace}\n Project: {bid.project_name}\n Currency: {bid.currency}\n Value: {bid.value}\n Created At: {bid.created_at}\n NFT ID: {bid.nft_id}\n Bid Type: {bid.bid_type}\n"
             )
 
+    return detailed_bids
+
+
+# search for arb opportunities
+def find_arb_opportunities() -> list:
+    asks = manage_asks(verbose=False)
+    bids = manage_bids()
+    order_book = {}
+    tokens = []
+    opportunities = []
+    number_of_opportunities = 0
+
+    for ask in asks:
+        tokens.append(ask.nft_id)
+
+    for token in tokens:
+        order_book[token] = {"asks": [], "bids": []}
+
+    for ask in asks:
+        simple_ask = {
+            "price": ask.value,
+            "currency": ask.currency,
+            "marketplace": ask.marketplace,
+        }
+
+        order_book[ask.nft_id]["asks"].append(simple_ask)
+
+    for bid in bids:
+        simple_bid = {
+            "price": bid.value,
+            "currency": bid.currency,
+            "marketplace": bid.marketplace,
+            "bid type": bid.bid_type,
+        }
+
+        if bid.bid_type == "single":
+            try:
+                order_book[bid.nft_id]["bids"].append(simple_bid)
+            except:
+                order_book[bid.nft_id] = {"asks": [], "bids": []}
+        else:
+            for token in order_book.keys():
+                order_book[token]["bids"].append(simple_bid)
+
+    for token in tokens:
+        order_book[token]["asks"] = sorted(
+            order_book[token]["asks"], key=itemgetter("price")
+        )
+        order_book[token]["bids"] = sorted(
+            order_book[token]["bids"], key=itemgetter("price"), reverse=True
+        )
+
+    # asks: 80, 81
+    # bids: 60, 70, 75, 81, 82
+
+    for token in tokens:
+        for bid in order_book[token]["bids"]:
+            for ask in order_book[token]["asks"]:
+                if float(bid["price"]) > float(ask["price"]):
+                    opportunities.append(
+                        {
+                            "bid": bid,
+                            "ask": ask,
+                        }
+                    )
+
+                    number_of_opportunities += 1
+
+        try:
+            max_bid = float(order_book[token]["bids"][0]["price"])
+        except:
+            max_bid = 0
+        min_ask = float(order_book[token]["asks"][0]["price"])
+
+        if max_bid > min_ask:
+            print(f"token id: {token}")
+            print(f"max bid: {max_bid}")
+            print(f"min ask: {min_ask}")
+
+        print(token)
+        print("Asks: ")
+        for ask in order_book[token]["asks"]:
+            print(ask)
+        print("Bids: ")
+        for bid in order_book[token]["bids"]:
+            print(bid)
+        print(f"max bid: {max_bid}")
+        print(f"min ask: {min_ask}")
+
+        print("\n")
+
+    print(
+        f"Total opportunities across OpenSea, X2Y2, and LooksRare: {number_of_opportunities}"
+    )
+
+    return opportunities
+
 
 # manage trades
 def manage_trades(
@@ -502,7 +602,7 @@ def manage_trades(
 configs = get_configs()
 contract = configs.contract_address
 data_type = configs.data_type
-target_marketplaces = configs.marketplace
+target_marketplaces = configs.marketplaces
 store_data = configs.store_data
 verbose = configs.verbose
 ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
@@ -512,7 +612,7 @@ print("fetching data...\n")
 
 # pull and organize ask data
 if data_type == "asks":
-    manage_asks()
+    manage_asks(verbose=verbose)
 
 # pull and organize ask distribution data
 if data_type == "ask_distribution":
@@ -525,3 +625,7 @@ if data_type == "bids":
 # pull and organize trade data
 if data_type == "trades":
     manage_trades()
+
+# pull and organize ask + bid data to search for arb opportunities
+if data_type == "arbitrage":
+    find_arb_opportunities()

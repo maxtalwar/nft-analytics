@@ -18,11 +18,12 @@ Only these specific names will be accepted.
 
 Data Type
 
-In this field, enter the type of data you want to collect. The options are asks, bids, trades, and ask distributions.
+In this field, enter the type of data you want to collect. The options are asks, bids, trades, ask distributions, and arbitrage opportunities.
 Asks returns the open asks for a given collection on a given marketplace. 
 Bids returns the open offers for a given collection on a given marketplace. NOTE: Only Looksrare bids have been implemented so far, because Opensea does not provide access to historical bids on their API. 
 Trades returns all the historical trades for a given collection on a given marketplace. 
 Ask distributions generates a streamlit chart of the number of asks on various exchanges. 
+Arbitarge opportunities searches for arbitrage opportunities across exchanges and displays them on the CLI. 
 
 Marketplace Name
 
