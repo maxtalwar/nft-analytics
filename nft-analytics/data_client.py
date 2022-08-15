@@ -195,14 +195,15 @@ def get_configs():
 # inserts data into table
 def insert_data(detailed_data: list, type: str) -> None:
     for detailed_piece_of_data in detailed_data:
-        try:
-            table_manager.insert_order(detailed_piece_of_data, type)
-        except:
-            sys.exit("writing data failed -- try resetting database file")
+        if detailed_piece_of_data.marketplace == "X2Y2":
+            try:
+                table_manager.insert_order(detailed_piece_of_data, type)
+            except:
+                sys.exit("writing data failed -- try resetting database file")
 
 
-# creates a bar chart
-def bar_chart(marketplace_listings: dict) -> None:
+# creates a bar chart of ask distributions across marketplaces
+def marketplace_distribution_bar_chart(marketplace_listings: dict) -> None:
     project = name_from_contract(contract)
     marketplaces = list(marketplace_listings.keys())
     listings = list(marketplace_listings.values())
@@ -210,9 +211,24 @@ def bar_chart(marketplace_listings: dict) -> None:
     figure = plt.figure(figsize=(10, 5))
 
     plt.bar(marketplaces, listings)
-    plt.xlabel("Marketplace")
     plt.ylabel("# of Listings")
     plt.title(f"# of Listings for {project} Across Marketplaces")
+
+    st.pyplot(figure)
+
+
+# creates a bar chart of ask distributions across prices on a single marketplace
+def price_distribution_bar_chart(listings_by_price: dict, marketplace: str) -> None:
+    project = name_from_contract(contract)
+    prices = list(listings_by_price.keys())
+    listings = list(listings_by_price.values())
+
+    figure = plt.figure(figsize=(10, 5))
+
+    plt.bar(prices, listings)
+    plt.xlabel("Listing Price")
+    plt.ylabel("# of Listings")
+    plt.title(f"# of {project} Listings across prices on {marketplace}")
 
     st.pyplot(figure)
 
@@ -266,16 +282,15 @@ def parse_asks(
         if marketplace in target_marketplaces:
             ask_count[marketplace] += 1
             if (
-                ask["tokenSetId"] not in token_ids
-                and value >= min_price
-                and value <= max_price
+                (marketplace + ask["tokenSetId"]) not in token_ids
+                and price <= max_price
             ):  # only look at asks on the given marketplace that haven't been added yet below the max price
                 if (
-                    value in marketplace_asks.keys()
+                    value in marketplace_asks[marketplace].keys()
                 ):  # if the rounded value of the ask is already a key in the dict, increment it. Otherwise create a new key
-                    marketplace_asks[value] += 1
+                    marketplace_asks[marketplace][value] += 1
                 else:
-                    marketplace_asks[value] = 1
+                    marketplace_asks[marketplace][value] = 1
 
                 order = Ask(
                     project_name,
@@ -290,7 +305,7 @@ def parse_asks(
                 )
                 detailed_asks.append(order)
 
-                token_ids.append(ask["tokenSetId"])
+                token_ids.append((marketplace + ask["tokenSetId"]))
 
 
 # converts bid JSON data to bid objects
@@ -384,13 +399,17 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
 
 
 # manage asks
-def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -> list:
+def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key(), bar_chart = True) -> list:
     min_price = data.get_floor_price(contract, key)
     max_price = min_price * 3
-    marketplace_asks = fill_dict(min_price, max_price)
+    marketplace_asks = {}
     detailed_asks = []
     continuation = None
     total = 0
+    x2y2_total = 0
+
+    for marketplace in target_marketplaces:
+        marketplace_asks[marketplace] = fill_dict(min_price, max_price)
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
     for i in range(15):
@@ -415,13 +434,20 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -
     if verbose:
         print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
-    for value in marketplace_asks.keys():
-        if verbose:
-            print(str(value) + ":" + str(marketplace_asks[value]))
-        total += marketplace_asks[value]
+    for marketplace in marketplace_asks.keys():
+        print(marketplace)
+        for value in marketplace_asks[marketplace].keys():
+            if verbose:
+                print(str(value) + ":" + str(marketplace_asks[marketplace][value]))
+            total += marketplace_asks[marketplace][value]
 
-    if total == len(detailed_asks) and store_data:
-        insert_data(detailed_asks, "ask")
+    if total == len(detailed_asks):
+        if store_data:
+            insert_data(detailed_asks, "ask")
+        if bar_chart:
+            for marketplace in marketplace_asks.keys():
+                price_distribution_bar_chart(marketplace_asks[marketplace], marketplace)
+
 
     print(f"\n{ask_count}")
 
@@ -429,7 +455,7 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key()) -
 
 
 # manage ask distribution
-def manage_ask_distribution(create_bar_chart=True) -> dict:
+def manage_ask_distribution() -> dict:
     manage_asks(verbose=False)
     parsed_ask_count = {}
 
@@ -437,8 +463,7 @@ def manage_ask_distribution(create_bar_chart=True) -> dict:
         if key in target_marketplaces:
             parsed_ask_count[key] = ask_count[key]
 
-    if create_bar_chart:
-        bar_chart(parsed_ask_count)
+    marketplace_distribution_bar_chart(parsed_ask_count)
 
     return parsed_ask_count
 
@@ -527,9 +552,6 @@ def find_arb_opportunities() -> list:
         order_book[token]["bids"] = sorted(
             order_book[token]["bids"], key=itemgetter("price"), reverse=True
         )
-
-    # asks: 80, 81
-    # bids: 60, 70, 75, 81, 82
 
     for token in tokens:
         for bid in order_book[token]["bids"]:
