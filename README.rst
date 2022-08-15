@@ -52,3 +52,5 @@ poetry run python3 data_client.py
 or, to run while generating a chart:
 
 poetry run streamlit run data_client.py
+
+note: streamlit has a bug causing arguments to automatically be interpreted as streamlit arguments, so you will have to enter configs manually for data types that use streamlit
