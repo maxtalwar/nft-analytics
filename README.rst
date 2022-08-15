@@ -51,4 +51,4 @@ poetry run python3 data_client.py
 
 or, to run while generating a chart:
 
-poetry run streamlit run python3 data_client.py
+poetry run streamlit run data_client.py
