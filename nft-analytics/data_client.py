@@ -76,6 +76,21 @@ def price_distribution_bar_chart(listings_by_price: dict, marketplace: str) -> N
     st.pyplot(figure)
 
 
+def ask_concentration_bar_chart(ask_concentration: dict) -> None:
+    project = name_from_contract(contract)
+    number_of_marketplaces = list(ask_concentration.keys())
+    number_of_asks = list(ask_concentration.values())
+
+    figure = plt.figure(figsize=(10, 5))
+
+    plt.bar(number_of_marketplaces, number_of_asks)
+    plt.xlabel("Number of Marketplaces")
+    plt.ylabel("# of Listings")
+    plt.title(f"# of {project} Listings on a Given Number of Marketplaces")
+
+    st.pyplot(figure)
+
+
 # converts ask JSON data to ask objects
 def parse_asks(
     orders: list,
@@ -228,7 +243,6 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key(), b
     detailed_asks = []
     continuation = None
     total = 0
-    x2y2_total = 0
 
     for marketplace in target_marketplaces:
         marketplace_asks[marketplace] = fill_dict(min_price, max_price)
@@ -257,7 +271,8 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key(), b
         print(f"Asks at each round ETH value from {min_price} to {max_price}:")
 
     for marketplace in marketplace_asks.keys():
-        print(marketplace)
+        if verbose:
+            print(marketplace)
         for value in marketplace_asks[marketplace].keys():
             if verbose:
                 print(str(value) + ":" + str(marketplace_asks[marketplace][value]))
@@ -275,6 +290,31 @@ def manage_asks(verbose: bool = True, key: str = data.get_reservoir_api_key(), b
 
     return detailed_asks
 
+
+# looks at how many projects are listed on one or multiple marketplaces
+def liquidity_concentration() -> None:
+    asks = manage_asks(verbose=False)
+    distribution = {1:0, 2:0, 3:0}
+    nft_ids = []
+
+    # for each ask in the orderbook
+    for ask in asks:
+    # if that ask's corresponding NFT has not been scanned yet
+        if ask.nft_id not in nft_ids:
+            nft_id = ask.nft_id
+            number_of_asks = 0
+    # look through each ask in orderbook for the specific tokensetID
+            for scanned_ask in asks:
+    # if the ask's tokenSetID we are looking at matches the tokenSetID we are looking for, increment marketplace count by one
+                if scanned_ask.nft_id == nft_id:
+                    number_of_asks += 1
+    # increment the distribution dict's appropriate value by one
+            nft_ids.append(nft_id)
+            distribution[number_of_asks] += 1
+
+    ask_concentration_bar_chart(distribution)
+
+    
 
 # manage ask distribution
 def manage_ask_distribution() -> dict:
@@ -473,3 +513,7 @@ if data_type == "trades":
 # pull and organize ask + bid data to search for arb opportunities
 if data_type == "arbitrage":
     find_arb_opportunities()
+
+# pull and organize ask data to show whether projects tend to be listed on one or multiple marketplaces
+if data_type == "ask_concentration":
+    liquidity_concentration()

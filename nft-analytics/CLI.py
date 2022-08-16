@@ -14,7 +14,7 @@ def get_configs():
         "--data_type",
         dest="data_type",
         type=str,
-        help="options: [asks, bids, trades, ask distribution, arbitrage]",
+        help="options: [asks, bids, trades, ask distribution, ask concentration, arbitrage]",
     )
     parser.add_argument(
         "--marketplaces",
@@ -55,7 +55,7 @@ def get_configs():
 # gets data type from command line arguments
 def get_data_type(choice: str = None) -> str:
     if choice == None:
-        choice = input("ask, ask distribution, bid, or trade data: ")
+        choice = input("ask, ask distribution, ask concentration, bid, or trade data: ")
 
     conversions = {
         "Bids": "bids",
@@ -81,6 +81,14 @@ def get_data_type(choice: str = None) -> str:
         "arbitrage": "arbitrage",
         "arbitrage opportunities": "arbitrage",
         "Arbitrage opportunities": "arbitrage",
+        "ask_concentration": "ask_concentration",
+        "Ask_Concentration": "ask_concentration",
+        "ask concentration": "ask_concentration",
+        "Ask Concentration": "ask_concentration",
+        "liquidity_concentration": "ask_concentration",
+        "Liquidity_Concentration": "ask_concentration",
+        "liquidity concentration": "ask_concentration",
+        "Liquidity Concentration": "ask_concentration",
     }
 
     try:
@@ -95,9 +103,8 @@ def process_marketplace_names(marketplaces: list = [], data_type: list = None) -
     if marketplaces == None:
         marketplaces = []
 
-    if data_type == "arbitrage":
-        marketplaces = ["OpenSea", "LooksRare", "X2Y2"]
-        return marketplaces
+    if data_type == "arbitrage" or data_type == "ask_concentration":
+        return ["OpenSea", "LooksRare", "X2Y2"]
 
     if len(marketplaces) != 0:
         for i in range(len(marketplaces)):
@@ -169,6 +176,8 @@ def get_data_preferences(
         store_data = True
     elif data_type == "arbitrage":
         verbose = False
+        store_data = False
+    elif data_type == "ask_concentration":
         store_data = False
     else:
         if store_data == None:

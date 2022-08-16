@@ -24,6 +24,7 @@ Bids returns the open offers for a given collection on a given marketplace. NOTE
 Trades returns all the historical trades for a given collection on a given marketplace. 
 Ask distributions generates a streamlit chart of the number of asks on various exchanges. 
 Arbitarge opportunities searches for arbitrage opportunities across exchanges and displays them on the CLI. 
+Ask concentration generates a streamlit chart of the number of asks listed on 1, 2, or 3 exchanges. Can give you a sense for how concentrated liquidity is per collection. 
 
 Marketplace Name
 
