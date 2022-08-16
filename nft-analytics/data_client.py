@@ -99,7 +99,8 @@ def parse_asks(
     marketplace_asks: json,
     detailed_asks: list,
     max_price: int,
-) -> None:
+    token_ids: list,
+) -> dict:
     for ask in orders:
         try:
             marketplace = ask["source"]["name"]
@@ -144,9 +145,16 @@ def parse_asks(
 
                 token_ids.append((marketplace + ask["tokenSetId"]))
 
+    return {
+        "ask_count": ask_count,
+        "marketplace_asks": marketplace_asks,
+        "detailed_asks": detailed_asks,
+        "token_ids": token_ids,
+    }
+
 
 # converts bid JSON data to bid objects
-def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
+def parse_looksrare_bids(bids: list, detailed_bids: list, token_ids: list) -> dict:
     makers = []
     for bid in bids:
         marketplace = "LooksRare"
@@ -155,8 +163,8 @@ def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
         price = str(float(bid["price"]) / (10**18))
         created_at = bid["startTime"]
         maker = bid["signer"]
-
         strategy = bid["strategy"]
+
         if strategy == "0x56244Bb70CbD3EA9Dc8007399F61dFC065190031":
             bid_type = "single"
         else:
@@ -184,9 +192,15 @@ def parse_looksrare_bids(bids: list, detailed_bids: list) -> None:
             token_ids.append(bid["hash"])
             makers.append(maker)
 
+    return {
+        "detailed_bids": detailed_bids,
+        "makers": makers,
+        "token_ids": token_ids,
+    }
+
 
 # converts trade JSON data to a trade object
-def parse_trades(trades: list, detailed_trades: list) -> None:
+def parse_trades(trades: list, detailed_trades: list, token_ids: list) -> dict:
     for trade in trades:
         project_name = name_from_contract(
             Web3.toChecksumAddress(trade["token"]["contract"])
@@ -230,15 +244,22 @@ def parse_trades(trades: list, detailed_trades: list) -> None:
                 offer_type,
                 fee,
             )
-            detailed_trades.append(parsed_trade)
 
+            detailed_trades.append(parsed_trade)
             token_ids.append(trade["id"])
+
+    return {
+        "detailed_trades": detailed_trades,
+        "token_ids": token_ids,
+    }
 
 
 # manage asks
 def manage_asks(key: str = data.get_reservoir_api_key(), max_price: int = 1000) -> list:
     marketplace_asks = {"OpenSea": {}, "LooksRare":{}, "X2Y2": {}}
+    ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
     detailed_asks = []
+    token_ids = []
     continuation = None
 
     # continually fetches the next page of asks and updates the marketplace orders with the next asks
@@ -247,13 +268,19 @@ def manage_asks(key: str = data.get_reservoir_api_key(), max_price: int = 1000) 
         orders = asks["orders"]
         continuation = asks["continuation"]
 
-        parse_asks(
+        parsed_asks = parse_asks(
             orders,
             ask_count,
             marketplace_asks=marketplace_asks,
             detailed_asks=detailed_asks,
             max_price=max_price,
+            token_ids = token_ids,
         )
+
+        ask_count = parsed_asks["ask_count"]
+        marketplace_asks = parsed_asks["marketplace_asks"]
+        detailed_asks = parsed_asks["detailed_asks"]
+        token_ids = parsed_asks["token_ids"]
 
     return {
         "ask_count": ask_count,
@@ -317,7 +344,7 @@ def liquidity_concentration() -> None:
 
 
 # manage ask distribution
-def manage_ask_distribution() -> dict:
+def ask_distribution() -> dict:
     asks = manage_asks()
     ask_count = asks["ask_count"]
     parsed_ask_count = {}
@@ -426,6 +453,7 @@ def find_arb_opportunities() -> list:
 # manage bids
 def manage_bids() -> list:
     detailed_bids = []
+    token_ids = []
     continuation = None
 
     # single bids
@@ -438,14 +466,19 @@ def manage_bids() -> list:
         except:
             continuation = None
 
-        parse_looksrare_bids(single_bids, detailed_bids=detailed_bids)
+        parsed_bids = parse_looksrare_bids(single_bids, detailed_bids=detailed_bids, token_ids=token_ids)
+        detailed_bids = parsed_bids["detailed_bids"]
+        token_ids = parsed_bids["token_ids"]
+
 
     # collection bids
     for i in range(15):
         collection_bids = data.get_looksrare_bids(
             contract=contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3"
         )
-        parse_looksrare_bids(collection_bids, detailed_bids=detailed_bids)
+        parsed_bids = parse_looksrare_bids(collection_bids, detailed_bids=detailed_bids, token_ids=token_ids)
+        detailed_bids = parsed_bids["detailed_bids"]
+        token_ids = parsed_bids["token_ids"]
 
     if store_data:
         insert_data(detailed_bids, "bid")
@@ -462,8 +495,9 @@ def manage_bids() -> list:
 # manage trades
 def manage_trades(
     store_data: bool = True, key: str = data.get_reservoir_api_key()
-) -> None:
+) -> list:
     detailed_trades = []
+    token_ids = []
     continuation = None
 
     for i in range(15):
@@ -471,7 +505,9 @@ def manage_trades(
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
 
-        parse_trades(trades, detailed_trades)
+        parsed_trades = parse_trades(trades, detailed_trades, token_ids=token_ids)
+        detailed_trades = parsed_trades["detailed_trades"]
+        token_ids = parsed_trades["token_ids"]
 
     if store_data:
         insert_data(detailed_trades, "trade")
@@ -482,6 +518,8 @@ def manage_trades(
                 f"Marketplace: {trade.marketplace} \n Project: {trade.project_name} \n Currency: {trade.currency} \n Value: {trade.value} \n Created At: {trade.timestamp} \n"
             )
 
+    return detailed_trades
+
 
 # instance variables
 configs = get_configs()
@@ -490,8 +528,6 @@ data_type = configs.data_type
 target_marketplaces = configs.marketplaces
 store_data = configs.store_data
 verbose = configs.verbose
-ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
-token_ids = []
 
 print("fetching data...\n")
 
@@ -501,15 +537,7 @@ if data_type == "asks":
 
 # pull and organize ask distribution data
 if data_type == "ask_distribution":
-    manage_ask_distribution()
-
-# pull and organize bid data
-if data_type == "bids":
-    manage_bids()
-
-# pull and organize trade data
-if data_type == "trades":
-    manage_trades()
+    ask_distribution()
 
 # pull and organize ask + bid data to search for arb opportunities
 if data_type == "arbitrage":
@@ -518,5 +546,13 @@ if data_type == "arbitrage":
 # pull and organize ask data to show whether projects tend to be listed on one or multiple marketplaces
 if data_type == "ask_concentration":
     liquidity_concentration()
+
+# pull and organize bid data
+if data_type == "bids":
+    manage_bids()
+
+# pull and organize trade data
+if data_type == "trades":
+    manage_trades()
 
 print("data fetching complete")
