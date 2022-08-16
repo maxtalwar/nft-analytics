@@ -55,7 +55,7 @@ def get_configs():
 # gets data type from command line arguments
 def get_data_type(choice: str = None) -> str:
     if choice == None:
-        choice = input("ask, ask distribution, ask concentration, bid, or trade data: ")
+        choice = input("ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data: ")
 
     conversions = {
         "Bids": "bids",
@@ -68,6 +68,7 @@ def get_data_type(choice: str = None) -> str:
         "asks": "asks",
         "ask": "asks",
         "a": "asks",
+        "ask price distribution": "asks",
         "Trades": "trades",
         "Trade": "trades",
         "trade": "trades",
@@ -77,6 +78,7 @@ def get_data_type(choice: str = None) -> str:
         "ask-distribution": "ask_distribution",
         "ask distribution": "ask_distribution",
         "ask distributions": "ask_distribution",
+        "ask marketplace distribution": "ask_distribution",
         "Arbitrage": "arbitrage",
         "arbitrage": "arbitrage",
         "arbitrage opportunities": "arbitrage",
@@ -85,6 +87,7 @@ def get_data_type(choice: str = None) -> str:
         "Ask_Concentration": "ask_concentration",
         "ask concentration": "ask_concentration",
         "Ask Concentration": "ask_concentration",
+        "ask marketplace concentration": "ask_concentration",
         "liquidity_concentration": "ask_concentration",
         "Liquidity_Concentration": "ask_concentration",
         "liquidity concentration": "ask_concentration",
@@ -182,7 +185,7 @@ def get_data_preferences(
     else:
         if store_data == None:
             store_data = input("Store data in .db file? [Y/n]: ") == "Y"
-        if not store_data:
+        if not store_data and data_type != "asks":
             verbose = True
         elif verbose == None:
             verbose = input("Output data to CLI? [Y/n]: ") == "Y"
