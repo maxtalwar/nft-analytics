@@ -18,7 +18,7 @@ def get_reservoir_api_key() -> json:
 
 
 # gets the floor price for a specific project
-def get_floor_price(contract: str, key: str=get_reservoir_api_key()) -> json:
+def get_floor_price(contract: str, key: str = get_reservoir_api_key()) -> json:
     url = f"https://api.reservoir.tools/collection/v3?id={contract}&includeTopBid=false"
 
     headers = {"Accept": "*/*", "x-api-key": key}

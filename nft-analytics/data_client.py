@@ -32,7 +32,9 @@ def insert_data(detailed_data: list, type: str) -> None:
 
 
 # generates a streamlit bar chart
-def generate_bar_chart(data: dict, x_axis_title: str, y_axis_title: str, title: str) -> None:
+def generate_bar_chart(
+    data: dict, x_axis_title: str, y_axis_title: str, title: str
+) -> None:
     x_axis = list(data.keys())
     y_axis = list(data.values())
 
@@ -76,9 +78,8 @@ def parse_asks(
         if marketplace in target_marketplaces:
             ask_count[marketplace] += 1
             if (
-                (marketplace + ask["tokenSetId"]) not in token_ids
-                and price <= max_price
-            ):  # only look at asks on the given marketplace that haven't been added yet below the max price
+                marketplace + ask["tokenSetId"]
+            ) not in token_ids and price <= max_price:  # only look at asks on the given marketplace that haven't been added yet below the max price
                 if (
                     value in marketplace_asks[marketplace].keys()
                 ):  # if the rounded value of the ask is already a key in the dict, increment it. Otherwise create a new key
@@ -156,7 +157,9 @@ def parse_looksrare_bids(bids: list, detailed_bids: list, token_ids: list) -> di
 
 
 # converts trade JSON data to a trade object
-def parse_trades(trades: list, detailed_trades: list, token_ids: list, target_marketplaces:list) -> dict:
+def parse_trades(
+    trades: list, detailed_trades: list, token_ids: list, target_marketplaces: list
+) -> dict:
     for trade in trades:
         project_name = name_from_contract(
             Web3.toChecksumAddress(trade["token"]["contract"])
@@ -211,8 +214,14 @@ def parse_trades(trades: list, detailed_trades: list, token_ids: list, target_ma
 
 
 # manage asks
-def manage_asks(contract:str, target_marketplaces:list, store_data: bool = False, key: str = data.get_reservoir_api_key(), max_price: int = 1000) -> list:
-    marketplace_asks = {"OpenSea": {}, "LooksRare":{}, "X2Y2": {}}
+def manage_asks(
+    contract: str,
+    target_marketplaces: list,
+    store_data: bool = False,
+    key: str = data.get_reservoir_api_key(),
+    max_price: int = 1000,
+) -> list:
+    marketplace_asks = {"OpenSea": {}, "LooksRare": {}, "X2Y2": {}}
     ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
     detailed_asks = []
     token_ids = []
@@ -250,12 +259,23 @@ def manage_asks(contract:str, target_marketplaces:list, store_data: bool = False
 
 
 # gets and plots ask price distribution
-def ask_price_distribution(contract:str, verbose:bool, store_data:bool, target_marketplaces:list, bar_chart: bool=True) -> None:
+def ask_price_distribution(
+    contract: str,
+    verbose: bool,
+    store_data: bool,
+    target_marketplaces: list,
+    bar_chart: bool = True,
+) -> None:
     project = name_from_contract(contract)
     min_price = data.get_floor_price(contract)
     max_price = min_price * 3
 
-    asks = manage_asks(contract=contract, max_price=max_price, store_data=store_data, target_marketplaces=target_marketplaces)
+    asks = manage_asks(
+        contract=contract,
+        max_price=max_price,
+        store_data=store_data,
+        target_marketplaces=target_marketplaces,
+    )
     marketplace_asks = asks["marketplace_asks"]
 
     # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc and store it in a .db file
@@ -273,14 +293,25 @@ def ask_price_distribution(contract:str, verbose:bool, store_data:bool, target_m
 
     if bar_chart:
         for marketplace in marketplace_asks.keys():
-            #marketplace_distribution_bar_chart(marketplace_asks[marketplace])
-            generate_bar_chart(data=marketplace_asks[marketplace], x_axis_title="Listing Price", y_axis_title="# of Listings", title=f"# of {project} Listings across prices on {marketplace}")
+            # marketplace_distribution_bar_chart(marketplace_asks[marketplace])
+            generate_bar_chart(
+                data=marketplace_asks[marketplace],
+                x_axis_title="Listing Price",
+                y_axis_title="# of Listings",
+                title=f"# of {project} Listings across prices on {marketplace}",
+            )
 
 
 # get and plot ask marketplace distribution
-def ask_marketplace_distribution(contract:str, store_data:bool, target_marketplaces:list) -> dict:
+def ask_marketplace_distribution(
+    contract: str, store_data: bool, target_marketplaces: list
+) -> dict:
     project = name_from_contract(contract)
-    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)
+    asks = manage_asks(
+        contract=contract,
+        store_data=store_data,
+        target_marketplaces=target_marketplaces,
+    )
     ask_count = asks["ask_count"]
     parsed_ask_count = {}
 
@@ -288,22 +319,33 @@ def ask_marketplace_distribution(contract:str, store_data:bool, target_marketpla
         if key in target_marketplaces:
             parsed_ask_count[key] = ask_count[key]
 
-    generate_bar_chart(data=parsed_ask_count, x_axis_title=None, y_axis_title="# of Listings", title=f"# of Listings for {project} Across Marketplaces")
+    generate_bar_chart(
+        data=parsed_ask_count,
+        x_axis_title=None,
+        y_axis_title="# of Listings",
+        title=f"# of Listings for {project} Across Marketplaces",
+    )
 
     return parsed_ask_count
 
 
 # looks at how many projects are listed on one or multiple marketplaces (ask marketplace concentration)
-def ask_marketplace_concentration(contract:str, store_data:bool, target_marketplaces:list) -> None:
+def ask_marketplace_concentration(
+    contract: str, store_data: bool, target_marketplaces: list
+) -> None:
     project = name_from_contract(contract)
-    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)
+    asks = manage_asks(
+        contract=contract,
+        store_data=store_data,
+        target_marketplaces=target_marketplaces,
+    )
     detailed_asks = asks["detailed_asks"]
-    distribution = {1:0, 2:0, 3:0}
+    distribution = {1: 0, 2: 0, 3: 0}
     nft_ids = []
 
     # for each ask in the orderbook
     for ask in detailed_asks:
-    # if that ask's corresponding NFT has not been scanned yet
+        # if that ask's corresponding NFT has not been scanned yet
         if ask.nft_id not in nft_ids:
             nft_id = ask.nft_id
             number_of_asks = 0
@@ -316,12 +358,23 @@ def ask_marketplace_concentration(contract:str, store_data:bool, target_marketpl
             distribution[number_of_asks] += 1
             nft_ids.append(nft_id)
 
-    generate_bar_chart(data=distribution, x_axis_title="Number of Marketplaces", y_axis_title="# of Listings", title=f"# of {project} Listings on a Given Number of Marketplaces")
+    generate_bar_chart(
+        data=distribution,
+        x_axis_title="Number of Marketplaces",
+        y_axis_title="# of Listings",
+        title=f"# of {project} Listings on a Given Number of Marketplaces",
+    )
 
 
 # search for arb opportunities
-def find_arb_opportunities(contract:str, store_data:bool, verbose:str, target_marketplaces:list) -> list:
-    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)["detailed_asks"]
+def find_arb_opportunities(
+    contract: str, store_data: bool, verbose: str, target_marketplaces: list
+) -> list:
+    asks = manage_asks(
+        contract=contract,
+        store_data=store_data,
+        target_marketplaces=target_marketplaces,
+    )["detailed_asks"]
     bids = manage_bids(contract=contract, store_data=store_data, verbose=verbose)
     order_book = {}
     tokens = []
@@ -412,7 +465,7 @@ def find_arb_opportunities(contract:str, store_data:bool, verbose:str, target_ma
 
 
 # manage bids
-def manage_bids(contract:str, store_data:bool, verbose:bool) -> list:
+def manage_bids(contract: str, store_data: bool, verbose: bool) -> list:
     detailed_bids = []
     token_ids = []
     continuation = None
@@ -427,17 +480,20 @@ def manage_bids(contract:str, store_data:bool, verbose:bool) -> list:
         except:
             continuation = None
 
-        parsed_bids = parse_looksrare_bids(single_bids, detailed_bids=detailed_bids, token_ids=token_ids)
+        parsed_bids = parse_looksrare_bids(
+            single_bids, detailed_bids=detailed_bids, token_ids=token_ids
+        )
         detailed_bids = parsed_bids["detailed_bids"]
         token_ids = parsed_bids["token_ids"]
-
 
     # collection bids
     for i in range(15):
         collection_bids = data.get_looksrare_bids(
             contract=contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3"
         )
-        parsed_bids = parse_looksrare_bids(collection_bids, detailed_bids=detailed_bids, token_ids=token_ids)
+        parsed_bids = parse_looksrare_bids(
+            collection_bids, detailed_bids=detailed_bids, token_ids=token_ids
+        )
         detailed_bids = parsed_bids["detailed_bids"]
         token_ids = parsed_bids["token_ids"]
 
@@ -455,7 +511,11 @@ def manage_bids(contract:str, store_data:bool, verbose:bool) -> list:
 
 # manage trades
 def manage_trades(
-    contract:str, target_marketplaces:list, store_data:bool, verbose:bool, key: str = data.get_reservoir_api_key()
+    contract: str,
+    target_marketplaces: list,
+    store_data: bool,
+    verbose: bool,
+    key: str = data.get_reservoir_api_key(),
 ) -> list:
     detailed_trades = []
     token_ids = []
@@ -466,7 +526,12 @@ def manage_trades(
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
 
-        parsed_trades = parse_trades(trades, detailed_trades, token_ids=token_ids, target_marketplaces=target_marketplaces)
+        parsed_trades = parse_trades(
+            trades,
+            detailed_trades,
+            token_ids=token_ids,
+            target_marketplaces=target_marketplaces,
+        )
         detailed_trades = parsed_trades["detailed_trades"]
         token_ids = parsed_trades["token_ids"]
 

@@ -1,5 +1,6 @@
 import argparse, contracts, json
 
+
 def get_configs():
     parser = argparse.ArgumentParser(
         "Provide information about the data you want to query"
@@ -55,7 +56,9 @@ def get_configs():
 # gets data type from command line arguments
 def get_data_type(choice: str = None) -> str:
     if choice == None:
-        choice = input("ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data: ")
+        choice = input(
+            "ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data: "
+        )
 
     # ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bids, trades
     price_distribution = "ask_price_distribution"
@@ -128,6 +131,7 @@ def process_marketplace_names(marketplaces: list = [], data_type: list = None) -
 
     return marketplaces
 
+
 # gets project contract address from project name
 def get_contract_address(verbose: bool = True, collection: str = None) -> str:
     contract_data = contracts.contract_data
@@ -147,6 +151,7 @@ def get_contract_address(verbose: bool = True, collection: str = None) -> str:
     except:
         print("invalid collection name")
         return get_contract_address(verbose=False)
+
 
 # converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
 def convert_marketplace_name(marketplace: str = None) -> str:
@@ -179,7 +184,11 @@ def convert_marketplace_name(marketplace: str = None) -> str:
 def get_data_preferences(
     store_data: bool = None, verbose: bool = None, data_type: bool = None
 ) -> json:
-    if data_type == "ask_marketplace_distribution" or data_type == "ask_marketplace_concentration" or data_type == "arbitrage":
+    if (
+        data_type == "ask_marketplace_distribution"
+        or data_type == "ask_marketplace_concentration"
+        or data_type == "arbitrage"
+    ):
         verbose = False
     if data_type == "arbitrage":
         store_data = False
