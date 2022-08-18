@@ -14,7 +14,7 @@ def get_configs():
         "--data_type",
         dest="data_type",
         type=str,
-        help="options: [asks, bids, trades, ask distribution, ask concentration, arbitrage]",
+        help="options: [ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bids, trades]",
     )
     parser.add_argument(
         "--marketplaces",
@@ -57,41 +57,46 @@ def get_data_type(choice: str = None) -> str:
     if choice == None:
         choice = input("ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data: ")
 
+    # ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bids, trades
+    price_distribution = "ask_price_distribution"
+    marketplace_distribution = "ask_marketplace_distribution"
+    marketplace_concentration = "ask_marketplace_concentration"
+    arb = "arbitrage"
+    bids = "bids"
+    trades = "trades"
+
     conversions = {
-        "Bids": "bids",
-        "Bid": "bids",
-        "bid": "bids",
-        "bids": "bids",
-        "b": "bids",
-        "Asks": "asks",
-        "Ask": "asks",
-        "asks": "asks",
-        "ask": "asks",
-        "a": "asks",
-        "ask price distribution": "asks",
-        "Trades": "trades",
-        "Trade": "trades",
-        "trade": "trades",
-        "trades": "trades",
-        "t": "trades",
-        "ask_distribution": "ask_distribution",
-        "ask-distribution": "ask_distribution",
-        "ask distribution": "ask_distribution",
-        "ask distributions": "ask_distribution",
-        "ask marketplace distribution": "ask_distribution",
-        "Arbitrage": "arbitrage",
-        "arbitrage": "arbitrage",
-        "arbitrage opportunities": "arbitrage",
-        "Arbitrage opportunities": "arbitrage",
-        "ask_concentration": "ask_concentration",
-        "Ask_Concentration": "ask_concentration",
-        "ask concentration": "ask_concentration",
-        "Ask Concentration": "ask_concentration",
-        "ask marketplace concentration": "ask_concentration",
-        "liquidity_concentration": "ask_concentration",
-        "Liquidity_Concentration": "ask_concentration",
-        "liquidity concentration": "ask_concentration",
-        "Liquidity Concentration": "ask_concentration",
+        "Asks": price_distribution,
+        "Ask": price_distribution,
+        "asks": price_distribution,
+        "ask": price_distribution,
+        "ask price distribution": price_distribution,
+        "ask_distribution": marketplace_distribution,
+        "ask-distribution": marketplace_distribution,
+        "ask distribution": marketplace_distribution,
+        "ask distributions": marketplace_distribution,
+        "ask marketplace distribution": marketplace_distribution,
+        "ask_concentration": marketplace_concentration,
+        "Ask_Concentration": marketplace_concentration,
+        "ask concentration": marketplace_concentration,
+        "Ask Concentration": marketplace_concentration,
+        "ask marketplace concentration": marketplace_concentration,
+        "liquidity_concentration": marketplace_concentration,
+        "Liquidity_Concentration": marketplace_concentration,
+        "liquidity concentration": marketplace_concentration,
+        "Liquidity Concentration": marketplace_concentration,
+        "Arbitrage": arb,
+        "arbitrage": arb,
+        "arbitrage opportunities": arb,
+        "Arbitrage opportunities": arb,
+        "Bids": bids,
+        "Bid": bids,
+        "bid": bids,
+        "bids": bids,
+        "Trades": trades,
+        "Trade": trades,
+        "trade": trades,
+        "trades": trades,
     }
 
     try:
@@ -106,7 +111,7 @@ def process_marketplace_names(marketplaces: list = [], data_type: list = None) -
     if marketplaces == None:
         marketplaces = []
 
-    if data_type == "arbitrage" or data_type == "ask_concentration":
+    if data_type == "arbitrage" or data_type == "ask_marketplace_concentration":
         return ["OpenSea", "LooksRare", "X2Y2"]
 
     if len(marketplaces) != 0:
@@ -174,20 +179,16 @@ def convert_marketplace_name(marketplace: str = None) -> str:
 def get_data_preferences(
     store_data: bool = None, verbose: bool = None, data_type: bool = None
 ) -> json:
-    if data_type == "ask_distribution":
+    if data_type == "ask_marketplace_distribution" or data_type == "ask_marketplace_concentration" or data_type == "arbitrage":
         verbose = False
-        store_data = True
-    elif data_type == "arbitrage":
-        verbose = False
-        store_data = False
-    elif data_type == "ask_concentration":
+    if data_type == "arbitrage":
         store_data = False
     else:
         if store_data == None:
             store_data = input("Store data in .db file? [Y/n]: ") == "Y"
-        if not store_data and data_type != "asks":
+        if not store_data and data_type in ["bids", "trades"]:
             verbose = True
-        elif verbose == None:
+        if verbose == None:
             verbose = input("Output data to CLI? [Y/n]: ") == "Y"
 
     return {"storage_preferences": store_data, "verbose": verbose}

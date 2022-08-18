@@ -25,24 +25,3 @@ contract_to_collection_slug = {
     "0xED5AF388653567Af2F388E6224dC7C4b3241C544": "azuki",
     "0xa3AEe8BcE55BEeA1951EF834b99f3Ac60d1ABeeB": "veefriends",
 }
-
-input_conversions = {
-    "Bids": "bids",
-    "Bid": "bids",
-    "bid": "bids",
-    "bids": "bids",
-    "b": "bids",
-    "Asks": "asks",
-    "Ask": "asks",
-    "asks": "asks",
-    "ask": "asks",
-    "a": "asks",
-    "Trades": "trades",
-    "Trade": "trades",
-    "trade": "trades",
-    "trades": "trades",
-    "t": "trades",
-    "ask_distribution": "ask_distribution",
-    "ask-distribution": "ask_distribution",
-    "ask distribution": "ask_distribution",
-}

@@ -7,7 +7,7 @@ from typing import Union
 def insert_order(
     order: Union[AskModel, BidModel, TradeModel], input_table: str
 ) -> None:
-    if input_table == "ask":
+    if input_table == "asks":
         addition = asks.insert().values(
             project_name=order.project_name,
             nft_id=order.nft_id,
@@ -19,7 +19,7 @@ def insert_order(
             maker=order.maker,
             network=order.network,
         )
-    if input_table == "bid":
+    if input_table == "bids":
         addition = bids.insert().values(
             project_name=order.project_name,
             nft_id=order.nft_id,
@@ -31,7 +31,7 @@ def insert_order(
             bid_type=order.bid_type,
             network=order.network,
         )
-    if input_table == "trade":
+    if input_table == "trades":
         addition = trades.insert().values(
             project_name=order.project_name,
             nft_id=order.nft_id,
