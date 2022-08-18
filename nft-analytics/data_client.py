@@ -1,4 +1,5 @@
 import json, contracts, table_manager, sys, CLI
+from re import S
 from collections import OrderedDict
 from data_models import Ask, Bid, Trade
 from web3 import Web3
@@ -21,20 +22,6 @@ def name_from_contract(contract: str) -> str:
     return contract_to_name[contract]
 
 
-# fills the marketplace orders dict with the keys for the appropriate NFT prices
-def fill_dict(start: int, end: int) -> dict:
-    dictionary = {}
-    for i in range(start, end + 1):
-        dictionary[i] = 0
-
-    return dictionary
-
-
-# gets command line arguments
-def get_configs():
-    return CLI.get_configs()
-
-
 # inserts data into table
 def insert_data(detailed_data: list, type: str) -> None:
     for detailed_piece_of_data in detailed_data:
@@ -44,49 +31,18 @@ def insert_data(detailed_data: list, type: str) -> None:
             sys.exit("writing data failed -- try resetting database file")
 
 
-# creates a bar chart of ask distributions across marketplaces
-def marketplace_distribution_bar_chart(marketplace_listings: dict) -> None:
-    project = name_from_contract(contract)
-    marketplaces = list(marketplace_listings.keys())
-    listings = list(marketplace_listings.values())
+# generates a streamlit bar chart
+def generate_bar_chart(data: dict, x_axis_title: str, y_axis_title: str, title: str) -> None:
+    x_axis = list(data.keys())
+    y_axis = list(data.values())
 
     figure = plt.figure(figsize=(10, 5))
 
-    plt.bar(marketplaces, listings)
-    plt.ylabel("# of Listings")
-    plt.title(f"# of Listings for {project} Across Marketplaces")
+    plt.bar(x_axis, y_axis)
 
-    st.pyplot(figure)
-
-
-# creates a bar chart of ask distributions across prices on a single marketplace
-def price_distribution_bar_chart(listings_by_price: dict, marketplace: str) -> None:
-    project = name_from_contract(contract)
-    prices = list(listings_by_price.keys())
-    listings = list(listings_by_price.values())
-
-    figure = plt.figure(figsize=(10, 5))
-
-    plt.bar(prices, listings)
-    plt.xlabel("Listing Price")
-    plt.ylabel("# of Listings")
-    plt.title(f"# of {project} Listings across prices on {marketplace}")
-
-    st.pyplot(figure)
-
-
-# creates a bar chart of ask concentrations across marketplaces
-def ask_concentration_bar_chart(ask_concentration: dict) -> None:
-    project = name_from_contract(contract)
-    number_of_marketplaces = list(ask_concentration.keys())
-    number_of_asks = list(ask_concentration.values())
-
-    figure = plt.figure(figsize=(10, 5))
-
-    plt.bar(number_of_marketplaces, number_of_asks)
-    plt.xlabel("Number of Marketplaces")
-    plt.ylabel("# of Listings")
-    plt.title(f"# of {project} Listings on a Given Number of Marketplaces")
+    plt.xlabel(x_axis_title)
+    plt.ylabel(y_axis_title)
+    plt.title(title)
 
     st.pyplot(figure)
 
@@ -292,7 +248,8 @@ def manage_asks(store_data: bool = False, key: str = data.get_reservoir_api_key(
 
 
 # gets and plots ask price distribution
-def open_asks(verbose:bool, store_data:bool, bar_chart: bool=True) -> None:
+def ask_price_distribution(contract:str, verbose:bool, store_data:bool, bar_chart: bool=True) -> None:
+    project = name_from_contract(contract)
     min_price = data.get_floor_price(contract)
     max_price = min_price * 3
 
@@ -314,11 +271,13 @@ def open_asks(verbose:bool, store_data:bool, bar_chart: bool=True) -> None:
 
     if bar_chart:
         for marketplace in marketplace_asks.keys():
-            price_distribution_bar_chart(marketplace_asks[marketplace], marketplace)
+            #marketplace_distribution_bar_chart(marketplace_asks[marketplace])
+            generate_bar_chart(data=marketplace_asks[marketplace], x_axis_title="Listing Price", y_axis_title="# of Listings", title=f"# of {project} Listings across prices on {marketplace}")
 
 
 # get and plot ask marketplace distribution
-def ask_distribution(store_data:bool) -> dict:
+def ask_marketplace_distribution(contract:str, store_data:bool) -> dict:
+    project = name_from_contract(contract)
     asks = manage_asks(store_data = store_data)
     ask_count = asks["ask_count"]
     parsed_ask_count = {}
@@ -327,13 +286,14 @@ def ask_distribution(store_data:bool) -> dict:
         if key in target_marketplaces:
             parsed_ask_count[key] = ask_count[key]
 
-    marketplace_distribution_bar_chart(parsed_ask_count)
+    generate_bar_chart(data=parsed_ask_count, x_axis_title=None, y_axis_title="# of Listings", title=f"# of Listings for {project} Across Marketplaces")
 
     return parsed_ask_count
 
 
 # looks at how many projects are listed on one or multiple marketplaces (ask marketplace concentration)
-def liquidity_concentration(store_data:bool) -> None:
+def ask_marketplace_concentration(contract:str, store_data:bool) -> None:
+    project = name_from_contract(contract)
     asks = manage_asks(store_data=store_data)
     detailed_asks = asks["detailed_asks"]
     distribution = {1:0, 2:0, 3:0}
@@ -354,7 +314,7 @@ def liquidity_concentration(store_data:bool) -> None:
             distribution[number_of_asks] += 1
             nft_ids.append(nft_id)
 
-    ask_concentration_bar_chart(distribution)
+    generate_bar_chart(data=distribution, x_axis_title="Number of Marketplaces", y_axis_title="# of Listings", title=f"# of {project} Listings on a Given Number of Marketplaces")
 
 
 # search for arb opportunities
@@ -522,37 +482,39 @@ def manage_trades(
 
 # instance variables
 # TODO: add " if __name__ == "main" "
-configs = get_configs()
-contract = configs.contract_address
-data_type = configs.data_type
-target_marketplaces = configs.marketplaces
-store_data = configs.store_data
-verbose = configs.verbose
 
-print("fetching data...\n")
+if __name__ == "__main__":
+    configs = CLI.get_configs()
+    contract = configs.contract_address
+    data_type = configs.data_type
+    target_marketplaces = configs.marketplaces
+    store_data = configs.store_data
+    verbose = configs.verbose
 
-# pull and organize ask price distribution data
-if data_type == "ask_price_distribution":
-    open_asks(verbose=verbose, store_data=store_data)
+    print("fetching data...\n")
 
-# pull and organize ask marketplace distribution data
-if data_type == "ask_marketplace_distribution":
-    ask_distribution(store_data=store_data)
+    # pull and organize ask price distribution data
+    if data_type == "ask_price_distribution":
+        ask_price_distribution(contract=contract, verbose=verbose, store_data=store_data)
 
-# pull and organize ask marketplace concentration data
-if data_type == "ask_marketplace_concentration":
-    liquidity_concentration(store_data=store_data)
+    # pull and organize ask marketplace distribution data
+    if data_type == "ask_marketplace_distribution":
+        ask_marketplace_distribution(contract=contract, store_data=store_data)
 
-# pull and organize ask + bid data to search for arb opportunities
-if data_type == "arbitrage":
-    find_arb_opportunities(store_data=store_data)
+    # pull and organize ask marketplace concentration data
+    if data_type == "ask_marketplace_concentration":
+        ask_marketplace_concentration(contract=contract, store_data=store_data)
 
-# pull and organize bid data
-if data_type == "bids":
-    manage_bids()
+    # pull and organize ask + bid data to search for arb opportunities
+    if data_type == "arbitrage":
+        find_arb_opportunities(store_data=store_data)
 
-# pull and organize trade data
-if data_type == "trades":
-    manage_trades()
+    # pull and organize bid data
+    if data_type == "bids":
+        manage_bids()
 
-print("data fetching complete")
+    # pull and organize trade data
+    if data_type == "trades":
+        manage_trades()
+
+    print("data fetching complete")
