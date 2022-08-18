@@ -1,4 +1,4 @@
-import CLI, data_client, sys
+import CLI, data_client, sys, endpoints
 
 if __name__ == "__main__":
     done = False
@@ -10,60 +10,36 @@ if __name__ == "__main__":
         target_marketplaces = configs.marketplaces
         store_data = configs.store_data
         verbose = configs.verbose
+        api_key = endpoints.get_reservoir_api_key()
+
+        client = data_client.NftClient(configs, api_key)
 
         print("fetching data...\n")
 
         # pull and organize ask price distribution data
         if data_type == "ask_price_distribution":
-            data_client.ask_price_distribution(
-                contract=contract,
-                store_data=store_data,
-                verbose=verbose,
-                target_marketplaces=target_marketplaces,
-            )
+            client.ask_price_distribution()
 
         # pull and organize ask marketplace distribution data
         if data_type == "ask_marketplace_distribution":
-            data_client.ask_marketplace_distribution(
-                contract=contract,
-                store_data=store_data,
-                target_marketplaces=target_marketplaces,
-            )
+            client.ask_marketplace_distribution()
 
         # pull and organize ask marketplace concentration data
         if data_type == "ask_marketplace_concentration":
-            data_client.ask_marketplace_concentration(
-                contract=contract,
-                store_data=store_data,
-                target_marketplaces=target_marketplaces,
-            )
+            client.ask_marketplace_concentration()
 
         # pull and organize ask + bid data to search for arb opportunities
         if data_type == "arbitrage":
-            data_client.find_arb_opportunities(
-                contract=contract,
-                store_data=store_data,
-                verbose=verbose,
-                target_marketplaces=target_marketplaces,
-            )
+            client.find_arb_opportunities()
 
         # pull and organize bid data
         if data_type == "bids":
-            data_client.manage_bids(
-                contract=contract, store_data=store_data, verbose=verbose
-            )
+            client.manage_bids()
 
         # pull and organize trade data
         if data_type == "trades":
-            data_client.manage_trades(
-                contract=contract,
-                target_marketplaces=target_marketplaces,
-                store_data=store_data,
-                verbose=verbose,
-            )
+            client.manage_trades()
 
         print("data fetching complete")
 
         done = input("Done? [Y/n]: ") == "Y"
-
-sys.exit()
