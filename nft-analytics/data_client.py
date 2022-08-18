@@ -55,6 +55,7 @@ def parse_asks(
     detailed_asks: list,
     max_price: int,
     token_ids: list,
+    target_marketplaces: list,
 ) -> dict:
     for ask in orders:
         try:
@@ -155,7 +156,7 @@ def parse_looksrare_bids(bids: list, detailed_bids: list, token_ids: list) -> di
 
 
 # converts trade JSON data to a trade object
-def parse_trades(trades: list, detailed_trades: list, token_ids: list) -> dict:
+def parse_trades(trades: list, detailed_trades: list, token_ids: list, target_marketplaces:list) -> dict:
     for trade in trades:
         project_name = name_from_contract(
             Web3.toChecksumAddress(trade["token"]["contract"])
@@ -210,7 +211,7 @@ def parse_trades(trades: list, detailed_trades: list, token_ids: list) -> dict:
 
 
 # manage asks
-def manage_asks(store_data: bool = False, key: str = data.get_reservoir_api_key(), max_price: int = 1000) -> list:
+def manage_asks(contract:str, target_marketplaces:list, store_data: bool = False, key: str = data.get_reservoir_api_key(), max_price: int = 1000) -> list:
     marketplace_asks = {"OpenSea": {}, "LooksRare":{}, "X2Y2": {}}
     ask_count = {"OpenSea": 0, "LooksRare": 0, "X2Y2": 0, "atomic0": 0}
     detailed_asks = []
@@ -229,7 +230,8 @@ def manage_asks(store_data: bool = False, key: str = data.get_reservoir_api_key(
             marketplace_asks=marketplace_asks,
             detailed_asks=detailed_asks,
             max_price=max_price,
-            token_ids = token_ids,
+            token_ids=token_ids,
+            target_marketplaces=target_marketplaces,
         )
 
         ask_count = parsed_asks["ask_count"]
@@ -248,12 +250,12 @@ def manage_asks(store_data: bool = False, key: str = data.get_reservoir_api_key(
 
 
 # gets and plots ask price distribution
-def ask_price_distribution(contract:str, verbose:bool, store_data:bool, bar_chart: bool=True) -> None:
+def ask_price_distribution(contract:str, verbose:bool, store_data:bool, target_marketplaces:list, bar_chart: bool=True) -> None:
     project = name_from_contract(contract)
     min_price = data.get_floor_price(contract)
     max_price = min_price * 3
 
-    asks = manage_asks(max_price=max_price, store_data=store_data)
+    asks = manage_asks(contract=contract, max_price=max_price, store_data=store_data, target_marketplaces=target_marketplaces)
     marketplace_asks = asks["marketplace_asks"]
 
     # print out the data in an easily copiable format so that it can be pasted into excel, google sheets, etc and store it in a .db file
@@ -276,9 +278,9 @@ def ask_price_distribution(contract:str, verbose:bool, store_data:bool, bar_char
 
 
 # get and plot ask marketplace distribution
-def ask_marketplace_distribution(contract:str, store_data:bool) -> dict:
+def ask_marketplace_distribution(contract:str, store_data:bool, target_marketplaces:list) -> dict:
     project = name_from_contract(contract)
-    asks = manage_asks(store_data = store_data)
+    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)
     ask_count = asks["ask_count"]
     parsed_ask_count = {}
 
@@ -292,9 +294,9 @@ def ask_marketplace_distribution(contract:str, store_data:bool) -> dict:
 
 
 # looks at how many projects are listed on one or multiple marketplaces (ask marketplace concentration)
-def ask_marketplace_concentration(contract:str, store_data:bool) -> None:
+def ask_marketplace_concentration(contract:str, store_data:bool, target_marketplaces:list) -> None:
     project = name_from_contract(contract)
-    asks = manage_asks(store_data=store_data)
+    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)
     detailed_asks = asks["detailed_asks"]
     distribution = {1:0, 2:0, 3:0}
     nft_ids = []
@@ -318,9 +320,9 @@ def ask_marketplace_concentration(contract:str, store_data:bool) -> None:
 
 
 # search for arb opportunities
-def find_arb_opportunities(store_data:bool) -> list:
-    asks = manage_asks(store_data=store_data)["detailed_asks"]
-    bids = manage_bids()
+def find_arb_opportunities(contract:str, store_data:bool, verbose:str, target_marketplaces:list) -> list:
+    asks = manage_asks(contract=contract, store_data=store_data, target_marketplaces=target_marketplaces)["detailed_asks"]
+    bids = manage_bids(contract=contract, store_data=store_data, verbose=verbose)
     order_book = {}
     tokens = []
     opportunities = []
@@ -410,7 +412,7 @@ def find_arb_opportunities(store_data:bool) -> list:
 
 
 # manage bids
-def manage_bids() -> list:
+def manage_bids(contract:str, store_data:bool, verbose:bool) -> list:
     detailed_bids = []
     token_ids = []
     continuation = None
@@ -453,7 +455,7 @@ def manage_bids() -> list:
 
 # manage trades
 def manage_trades(
-    store_data: bool = True, key: str = data.get_reservoir_api_key()
+    contract:str, target_marketplaces:list, store_data:bool, verbose:bool, key: str = data.get_reservoir_api_key()
 ) -> list:
     detailed_trades = []
     token_ids = []
@@ -464,7 +466,7 @@ def manage_trades(
         trades = trade_data["trades"]
         continuation = trade_data["continuation"]
 
-        parsed_trades = parse_trades(trades, detailed_trades, token_ids=token_ids)
+        parsed_trades = parse_trades(trades, detailed_trades, token_ids=token_ids, target_marketplaces=target_marketplaces)
         detailed_trades = parsed_trades["detailed_trades"]
         token_ids = parsed_trades["token_ids"]
 
@@ -478,43 +480,3 @@ def manage_trades(
             )
 
     return detailed_trades
-
-
-# instance variables
-# TODO: add " if __name__ == "main" "
-
-if __name__ == "__main__":
-    configs = CLI.get_configs()
-    contract = configs.contract_address
-    data_type = configs.data_type
-    target_marketplaces = configs.marketplaces
-    store_data = configs.store_data
-    verbose = configs.verbose
-
-    print("fetching data...\n")
-
-    # pull and organize ask price distribution data
-    if data_type == "ask_price_distribution":
-        ask_price_distribution(contract=contract, verbose=verbose, store_data=store_data)
-
-    # pull and organize ask marketplace distribution data
-    if data_type == "ask_marketplace_distribution":
-        ask_marketplace_distribution(contract=contract, store_data=store_data)
-
-    # pull and organize ask marketplace concentration data
-    if data_type == "ask_marketplace_concentration":
-        ask_marketplace_concentration(contract=contract, store_data=store_data)
-
-    # pull and organize ask + bid data to search for arb opportunities
-    if data_type == "arbitrage":
-        find_arb_opportunities(store_data=store_data)
-
-    # pull and organize bid data
-    if data_type == "bids":
-        manage_bids()
-
-    # pull and organize trade data
-    if data_type == "trades":
-        manage_trades()
-
-    print("data fetching complete")
