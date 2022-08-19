@@ -57,7 +57,7 @@ def get_configs():
 def get_data_type(choice: str = None) -> str:
     if choice == None:
         choice = input(
-            "ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data: "
+            "Data Type: (ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bid, or trade data): "
         )
 
     # ask price distribution, ask marketplace distribution, ask marketplace concentration, arbitrage, bids, trades
@@ -111,11 +111,12 @@ def get_data_type(choice: str = None) -> str:
 
 # process marketplace names
 def process_marketplace_names(marketplaces: list = [], data_type: list = None) -> list:
-    if marketplaces == None:
-        marketplaces = []
-
     if data_type == "arbitrage" or data_type == "ask_marketplace_concentration":
         return ["OpenSea", "LooksRare", "X2Y2"]
+    
+    if marketplaces == None:
+        input_marketplaces = input("Marketplace Names (opensea, looksrare, x2y2): ")
+        marketplaces = list(input_marketplaces.split(" "))
 
     if len(marketplaces) != 0:
         for i in range(len(marketplaces)):
@@ -130,6 +131,32 @@ def process_marketplace_names(marketplaces: list = [], data_type: list = None) -
         adding_more = input("add another marketplace? [Y/n]: ") == "Y"
 
     return marketplaces
+
+
+# converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
+def convert_marketplace_name(marketplace: str = None) -> str:
+    OS = "OpenSea"
+    LR = "LooksRare"
+    X2 = "X2Y2"
+
+    if marketplace == None:
+        marketplace = input("Marketplace Name (opensea, looksrare, x2y2): ")
+
+    conversions = {
+        "Opensea": OS,
+        "opensea": OS,
+        "seaport": OS,
+        "Looksrare": LR,
+        "looksrare": LR,
+        "looks-rare": LR,
+        "x2y2": X2,
+    }
+
+    try:
+        return conversions[marketplace]
+    except:
+        print("invalid marketplace name")
+        return convert_marketplace_name()
 
 
 # gets project contract address from project name
@@ -151,33 +178,6 @@ def get_contract_address(verbose: bool = True, collection: str = None) -> str:
     except:
         print("invalid collection name")
         return get_contract_address(verbose=False)
-
-
-# converts various ways of spelling marketplaces into the names accepted by the reservoir.tools API
-def convert_marketplace_name(marketplace: str = None) -> str:
-    OS = "OpenSea"
-    LR = "LooksRare"
-    X2 = "X2Y2"
-
-    if marketplace == None:
-        marketplace = input("Marketplace name (opensea, looksrare, x2y2): ")
-
-    conversions = {
-        "Opensea": OS,
-        "opensea": OS,
-        "seaport": OS,
-        "Looksrare": LR,
-        "looksrare": LR,
-        "looks-rare": LR,
-        "x2y2": X2,
-    }
-
-    try:
-        return conversions[marketplace]
-    except:
-        print("invalid marketplace name")
-        print(marketplace)
-        return convert_marketplace_name()
 
 
 # gets storage and output preferences

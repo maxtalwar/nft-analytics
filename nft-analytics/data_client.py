@@ -296,12 +296,13 @@ class NftClient:
         if bar_chart:
             for marketplace in marketplace_asks.keys():
                 # marketplace_distribution_bar_chart(marketplace_asks[marketplace])
-                self.generate_bar_chart(
-                    data=marketplace_asks[marketplace],
-                    x_axis_title="Listing Price",
-                    y_axis_title="# of Listings",
-                    title=f"# of {project} Listings across prices on {marketplace}",
-                )
+                if marketplace_asks[marketplace] != None:
+                    self.generate_bar_chart(
+                        data=marketplace_asks[marketplace],
+                        x_axis_title="Listing Price",
+                        y_axis_title="# of Listings",
+                        title=f"# of {project} Listings across prices on {marketplace}",
+                    )
 
 
     # get and plot ask marketplace distribution
@@ -377,7 +378,7 @@ class NftClient:
             store_data=self.store_data,
             target_marketplaces=self.target_marketplaces,
         )["detailed_asks"]
-        bids = self.manage_bids(contract=self.contract, store_data=self.store_data, verbose=self.verbose)
+        bids = self.manage_bids()
         order_book = {}
         tokens = []
         opportunities = []
