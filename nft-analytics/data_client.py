@@ -7,6 +7,8 @@ import endpoints as data
 import streamlit as st
 import matplotlib.pyplot as plt
 from operator import itemgetter
+import numpy as np
+import pandas as pd
 
 class NftClient:
     def __init__(self, configs, api_key):
@@ -41,13 +43,43 @@ class NftClient:
         x_axis = list(data.keys())
         y_axis = list(data.values())
 
-        figure = plt.figure(figsize=(10, 5))
+        figure = plt.figure(figsize=(10, 5), dpi=150)
 
         plt.bar(x_axis, y_axis)
 
         plt.xlabel(x_axis_title)
         plt.ylabel(y_axis_title)
         plt.title(title)
+
+        if self.data_type == "ask_price_distribution":
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 10))
+        if self.data_type == "ask_marketplace_concentration":
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 1))
+
+        st.pyplot(figure)
+        
+    # generates multiple bar charts
+    def generate_multiple_bar_charts(
+        self, data:dict, x_axis_title:str, y_axis_title:str, title:str
+    ) -> None:
+        figure = plt.figure(figsize=(10, 5), dpi=150)
+
+        plt.xlabel(x_axis_title)
+        plt.ylabel(y_axis_title)
+        plt.title(title)
+
+        for marketplace in data.keys():
+            x_axis = list(data[marketplace].keys())
+            y_axis = list(data[marketplace].values())
+
+            plt.bar(x_axis, y_axis, label=marketplace)
+
+        plt.legend(list(data.keys()), loc="upper left")
+
+        if self.data_type == "ask_price_distribution":
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 10))
+        if self.data_type == "ask_marketplace_concentration":
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 1))
 
         st.pyplot(figure)
 
@@ -294,6 +326,7 @@ class NftClient:
                     print(str(value) + ":" + str(marketplace_asks[marketplace][value]))
 
         if bar_chart:
+            self.generate_multiple_bar_charts(data=marketplace_asks, x_axis_title="Listing Price", y_axis_title="# of Listings", title=f"# of {project} Listings across prices on {', '.join(marketplace_asks.keys())}",)
             for marketplace in marketplace_asks.keys():
                 # marketplace_distribution_bar_chart(marketplace_asks[marketplace])
                 if marketplace_asks[marketplace] != None:
