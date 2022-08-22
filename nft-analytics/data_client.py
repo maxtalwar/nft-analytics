@@ -1,14 +1,13 @@
-import json, contracts, table_manager, sys, CLI
+import json, contracts, table_manager, sys, CLI, math
 from re import S
 from collections import OrderedDict
 from data_models import Ask, Bid, Trade
 from web3 import Web3
-import endpoints as data
+import endpoints as data_source
 import streamlit as st
 import matplotlib.pyplot as plt
 from operator import itemgetter
 import numpy as np
-import pandas as pd
 
 
 class NftClient:
@@ -49,8 +48,10 @@ class NftClient:
         plt.ylabel(y_axis_title)
         plt.title(title)
 
+        floor_price = data_source.get_floor_price(contract=self.contract, key=self.api_key)
+
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 10))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price/10)))
         if self.data_type == "ask_marketplace_concentration":
             plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
@@ -74,8 +75,10 @@ class NftClient:
 
         plt.legend(list(data.keys()), loc="upper left")
 
+        floor_price = data_source.get_floor_price(contract=self.contract, key=self.api_key)
+
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 10))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price/10)))
         if self.data_type == "ask_marketplace_concentration":
             plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
@@ -255,7 +258,7 @@ class NftClient:
         contract: str,
         target_marketplaces: list,
         store_data: bool = False,
-        key: str = data.get_reservoir_api_key(),
+        key: str = data_source.get_reservoir_api_key(),
         max_price: int = 1000,
     ) -> dict:
         marketplace_asks = {"OpenSea": {}, "LooksRare": {}, "X2Y2": {}}
@@ -266,7 +269,7 @@ class NftClient:
 
         # continually fetches the next page of asks and updates the marketplace orders with the next asks
         for i in range(15):
-            asks = data.get_open_asks(contract, key, continuation)
+            asks = data_source.get_open_asks(contract, key, continuation)
             orders = asks["orders"]
             continuation = asks["continuation"]
 
@@ -300,7 +303,7 @@ class NftClient:
         bar_chart: bool = True,
     ) -> None:
         project = self.name_from_contract(self.contract)
-        min_price = data.get_floor_price(self.contract)
+        min_price = data_source.get_floor_price(self.contract)
         max_price = min_price * 3
 
         asks = self.manage_asks(
@@ -502,7 +505,7 @@ class NftClient:
 
         # single bids
         for i in range(15):
-            single_bids = data.get_looksrare_bids(
+            single_bids = data_source.get_looksrare_bids(
                 contract=self.contract, continuation=continuation
             )
             try:
@@ -518,7 +521,7 @@ class NftClient:
 
         # collection bids
         for i in range(15):
-            collection_bids = data.get_looksrare_bids(
+            collection_bids = data_source.get_looksrare_bids(
                 contract=self.contract,
                 strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3",
             )
@@ -548,7 +551,7 @@ class NftClient:
         continuation = None
 
         for i in range(15):
-            trade_data = data.get_trades(self.contract, self.api_key, continuation)
+            trade_data = data_source.get_trades(self.contract, self.api_key, continuation)
             trades = trade_data["trades"]
             continuation = trade_data["continuation"]
 
