@@ -1,3 +1,5 @@
+More info can be found here: https://docs.google.com/document/d/1RJ3_Ypvgv_AbifZQahioFnhhUhYFBvvVA6EZMaIjp1k/edit?usp=sharing
+
 You will initially be prompted about the following information:
 
 Collection Name
