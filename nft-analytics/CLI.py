@@ -113,7 +113,7 @@ def get_data_type(choice: str = None) -> str:
 def process_marketplace_names(marketplaces: list = [], data_type: list = None) -> list:
     if data_type == "arbitrage" or data_type == "ask_marketplace_concentration":
         return ["OpenSea", "LooksRare", "X2Y2"]
-    
+
     if marketplaces == None:
         input_marketplaces = input("Marketplace Names (opensea, looksrare, x2y2): ")
         marketplaces = list(input_marketplaces.split(" "))

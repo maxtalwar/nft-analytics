@@ -10,6 +10,7 @@ from operator import itemgetter
 import numpy as np
 import pandas as pd
 
+
 class NftClient:
     def __init__(self, configs, api_key):
         self.contract = configs.contract_address
@@ -19,13 +20,11 @@ class NftClient:
         self.verbose = configs.verbose
         self.api_key = api_key
 
-
     # returns a project name from a contract address
     def name_from_contract(self, contract: str) -> str:
         contract_to_name = {v: k for k, v in contracts.contract_data.items()}
 
         return contract_to_name[contract]
-
 
     # inserts data into table
     def insert_data(self, detailed_data: list, type: str) -> None:
@@ -34,7 +33,6 @@ class NftClient:
                 table_manager.insert_order(detailed_piece_of_data, type)
             except:
                 sys.exit("writing data failed -- try resetting database file")
-
 
     # generates a streamlit bar chart
     def generate_bar_chart(
@@ -52,15 +50,15 @@ class NftClient:
         plt.title(title)
 
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 10))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 10))
         if self.data_type == "ask_marketplace_concentration":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 1))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
         st.pyplot(figure)
-        
+
     # generates multiple bar charts
     def generate_multiple_bar_charts(
-        self, data:dict, x_axis_title:str, y_axis_title:str, title:str
+        self, data: dict, x_axis_title: str, y_axis_title: str, title: str
     ) -> None:
         figure = plt.figure(figsize=(10, 5), dpi=150)
 
@@ -77,12 +75,11 @@ class NftClient:
         plt.legend(list(data.keys()), loc="upper left")
 
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 10))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 10))
         if self.data_type == "ask_marketplace_concentration":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis))+1, 1))
+            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
         st.pyplot(figure)
-
 
     # converts ask JSON data to ask objects
     def parse_asks(
@@ -145,9 +142,10 @@ class NftClient:
             "token_ids": token_ids,
         }
 
-
     # converts bid JSON data to bid objects
-    def parse_looksrare_bids(self, bids: list, detailed_bids: list, token_ids: list) -> dict:
+    def parse_looksrare_bids(
+        self, bids: list, detailed_bids: list, token_ids: list
+    ) -> dict:
         makers = []
         for bid in bids:
             marketplace = "LooksRare"
@@ -191,10 +189,13 @@ class NftClient:
             "token_ids": token_ids,
         }
 
-
     # converts trade JSON data to a trade object
     def parse_trades(
-        self, trades: list, detailed_trades: list, token_ids: list, target_marketplaces: list
+        self,
+        trades: list,
+        detailed_trades: list,
+        token_ids: list,
+        target_marketplaces: list,
     ) -> dict:
         for trade in trades:
             project_name = self.name_from_contract(
@@ -248,10 +249,9 @@ class NftClient:
             "token_ids": token_ids,
         }
 
-
     # manage asks
     def manage_asks(
-        self, 
+        self,
         contract: str,
         target_marketplaces: list,
         store_data: bool = False,
@@ -294,7 +294,6 @@ class NftClient:
             "detailed_asks": detailed_asks,
         }
 
-
     # gets and plots ask price distribution
     def ask_price_distribution(
         self,
@@ -326,7 +325,12 @@ class NftClient:
                     print(str(value) + ":" + str(marketplace_asks[marketplace][value]))
 
         if bar_chart:
-            self.generate_multiple_bar_charts(data=marketplace_asks, x_axis_title="Listing Price", y_axis_title="# of Listings", title=f"# of {project} Listings across prices on {', '.join(marketplace_asks.keys())}",)
+            self.generate_multiple_bar_charts(
+                data=marketplace_asks,
+                x_axis_title="Listing Price",
+                y_axis_title="# of Listings",
+                title=f"# of {project} Listings across prices on {', '.join(marketplace_asks.keys())}",
+            )
             for marketplace in marketplace_asks.keys():
                 # marketplace_distribution_bar_chart(marketplace_asks[marketplace])
                 if marketplace_asks[marketplace] != None:
@@ -337,11 +341,8 @@ class NftClient:
                         title=f"# of {project} Listings across prices on {marketplace}",
                     )
 
-
     # get and plot ask marketplace distribution
-    def ask_marketplace_distribution(
-        self
-    ) -> dict:
+    def ask_marketplace_distribution(self) -> dict:
         project = self.name_from_contract(self.contract)
         asks = self.manage_asks(
             contract=self.contract,
@@ -364,11 +365,8 @@ class NftClient:
 
         return parsed_ask_count
 
-
     # looks at how many projects are listed on one or multiple marketplaces (ask marketplace concentration)
-    def ask_marketplace_concentration(
-        self
-    ) -> None:
+    def ask_marketplace_concentration(self) -> None:
         project = self.name_from_contract(self.contract)
         asks = self.manage_asks(
             contract=self.contract,
@@ -401,11 +399,8 @@ class NftClient:
             title=f"# of {project} Listings on a Given Number of Marketplaces",
         )
 
-
     # search for arb opportunities
-    def find_arb_opportunities(
-        self
-    ) -> list:
+    def find_arb_opportunities(self) -> list:
         asks = self.manage_asks(
             contract=self.contract,
             store_data=self.store_data,
@@ -499,7 +494,6 @@ class NftClient:
 
         return opportunities
 
-
     # manage bids
     def manage_bids(self) -> list:
         detailed_bids = []
@@ -525,7 +519,8 @@ class NftClient:
         # collection bids
         for i in range(15):
             collection_bids = data.get_looksrare_bids(
-                contract=self.contract, strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3"
+                contract=self.contract,
+                strategy="0x86F909F70813CdB1Bc733f4D97Dc6b03B8e7E8F3",
             )
             parsed_bids = self.parse_looksrare_bids(
                 collection_bids, detailed_bids=detailed_bids, token_ids=token_ids
@@ -544,10 +539,9 @@ class NftClient:
 
         return detailed_bids
 
-
     # manage trades
     def manage_trades(
-        self, 
+        self,
     ) -> list:
         detailed_trades = []
         token_ids = []
