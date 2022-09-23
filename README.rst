@@ -47,7 +47,7 @@ This is automatically set to True if you are not storing data because otherwise 
 
 Troubleshooting:
 
-If you are told "writing data failed -- try resetting the database file", just delete the database.db file and run "table_manager.py" again. This isn't automated because automatically deleting the database file with all the data the collected data should only be done expliitly by the user. 
+If you are told "writing data failed -- try resetting the database file", just delete the database.db file and run "table_manager.py" again. This isn't automated because automatically deleting the database file with all the data the collected data should only be done explicitly by the user. 
 
 To run: 
 
