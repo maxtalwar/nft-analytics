@@ -47,9 +47,9 @@ def get_looksrare_bids(
     return response
 
 
-# gets open bids on a specific project (currently not working because of issue w/ reservoir API)
-def get_open_bids(contract: str, key: str, continuation: str = None) -> json:
-    url = f"https://api.reservoir.tools/orders/bids/v2?contracts={contract}&limit=100"
+# gets bids from reservoir
+def get_open_bids(contract: str, key: str, continuation: str = None):
+    url = f"https://api.reservoir.tools/orders/bids/v4?contracts={contract}&includeMetadata=false&includeRawData=false&sortBy=createdAt&limit=100"
 
     if continuation != None:
         url += f"&continuation={continuation}"

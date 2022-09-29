@@ -48,10 +48,16 @@ class NftClient:
         plt.ylabel(y_axis_title)
         plt.title(title)
 
-        floor_price = data_source.get_floor_price(contract=self.contract, key=self.api_key)
+        floor_price = data_source.get_floor_price(
+            contract=self.contract, key=self.api_key
+        )
 
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price/10)))
+            plt.xticks(
+                np.arange(
+                    int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price / 10)
+                )
+            )
         if self.data_type == "ask_marketplace_concentration":
             plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
@@ -75,10 +81,16 @@ class NftClient:
 
         plt.legend(list(data.keys()), loc="upper left")
 
-        floor_price = data_source.get_floor_price(contract=self.contract, key=self.api_key)
+        floor_price = data_source.get_floor_price(
+            contract=self.contract, key=self.api_key
+        )
 
         if self.data_type == "ask_price_distribution":
-            plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price/10)))
+            plt.xticks(
+                np.arange(
+                    int(min(x_axis)), int(max(x_axis)) + 1, math.ceil(floor_price / 10)
+                )
+            )
         if self.data_type == "ask_marketplace_concentration":
             plt.xticks(np.arange(int(min(x_axis)), int(max(x_axis)) + 1, 1))
 
@@ -154,7 +166,7 @@ class NftClient:
             marketplace = "LooksRare"
             project_name = self.name_from_contract(bid["collectionAddress"])
             currency = "ETH"
-            price = str(float(bid["price"]) / (10**18))
+            price = str(float(bid["price"]) / (10 ** 18))
             created_at = bid["startTime"]
             maker = bid["signer"]
             strategy = bid["strategy"]
@@ -184,6 +196,50 @@ class NftClient:
                 detailed_bids.append(parsed_bid)
 
                 token_ids.append(bid["hash"])
+                makers.append(maker)
+
+        return {
+            "detailed_bids": detailed_bids,
+            "makers": makers,
+            "token_ids": token_ids,
+        }
+
+    # converts bid JSON data to bid objects
+    def parse_bids(self, bids: list, detailed_bids: list, token_ids: list):
+        makers = []
+
+        for bid in bids:
+            marketplace = bid["source"]["name"]
+            project_name = self.name_from_contract(
+                Web3.toChecksumAddress(bid["contract"])
+            )
+            currency = "ETH"
+            price = str(float(bid["price"]["amount"]["native"]))
+            created_at = bid["createdAt"]
+            maker = bid["maker"]
+            try:
+                nft_id = bid["tokenSetId"].split(":", 2)[2]
+                bid_type = "single"
+            except:
+                bid_type = "collection"
+                nft_id = "N/A"
+
+            if bid["id"] not in token_ids:
+                parsed_bid = Bid(
+                    project_name,
+                    nft_id,
+                    currency,
+                    price,
+                    marketplace,
+                    created_at,
+                    maker,
+                    bid_type,
+                    "ETH",
+                )
+
+                detailed_bids.append(parsed_bid)
+
+                token_ids.append(bid["id"])
                 makers.append(maker)
 
         return {
@@ -298,10 +354,7 @@ class NftClient:
         }
 
     # gets and plots ask price distribution
-    def ask_price_distribution(
-        self,
-        bar_chart: bool = True,
-    ) -> None:
+    def ask_price_distribution(self, bar_chart: bool = True,) -> None:
         project = self.name_from_contract(self.contract)
         min_price = data_source.get_floor_price(self.contract)
         max_price = min_price * 3
@@ -460,10 +513,7 @@ class NftClient:
                 for ask in order_book[token]["asks"]:
                     if float(bid["price"]) > float(ask["price"]):
                         opportunities.append(
-                            {
-                                "bid": bid,
-                                "ask": ask,
-                            }
+                            {"bid": bid, "ask": ask,}
                         )
 
                         number_of_opportunities += 1
@@ -479,7 +529,7 @@ class NftClient:
                 print(f"max bid: {max_bid}")
                 print(f"min ask: {min_ask}")
 
-            print(token)
+            """print(token)
             print("Asks: ")
             for ask in order_book[token]["asks"]:
                 print(ask)
@@ -489,7 +539,7 @@ class NftClient:
             print(f"max bid: {max_bid}")
             print(f"min ask: {min_ask}")
 
-            print("\n")
+            print("\n")"""
 
         print(
             f"Total opportunities across OpenSea, X2Y2, and LooksRare: {number_of_opportunities}"
@@ -503,7 +553,7 @@ class NftClient:
         token_ids = []
         continuation = None
 
-        # single bids
+        """# single bids
         for i in range(15):
             single_bids = data_source.get_looksrare_bids(
                 contract=self.contract, continuation=continuation
@@ -515,6 +565,25 @@ class NftClient:
 
             parsed_bids = self.parse_looksrare_bids(
                 single_bids, detailed_bids=detailed_bids, token_ids=token_ids
+            )
+            detailed_bids = parsed_bids["detailed_bids"]
+            token_ids = parsed_bids["token_ids"]"""
+
+        # single bids
+        for i in range(15):
+            single_bids = data_source.get_open_bids(
+                contract=self.contract, key=self.api_key, continuation=continuation
+            )
+
+            bids = single_bids["bids"]
+
+            try:
+                continuation = single_bids["continuation"]
+            except:
+                continuation = None
+
+            parsed_bids = self.parse_bids(
+                bids=bids, detailed_bids=detailed_bids, token_ids=token_ids
             )
             detailed_bids = parsed_bids["detailed_bids"]
             token_ids = parsed_bids["token_ids"]
@@ -543,15 +612,15 @@ class NftClient:
         return detailed_bids
 
     # manage trades
-    def manage_trades(
-        self,
-    ) -> list:
+    def manage_trades(self,) -> list:
         detailed_trades = []
         token_ids = []
         continuation = None
 
         for i in range(15):
-            trade_data = data_source.get_trades(self.contract, self.api_key, continuation)
+            trade_data = data_source.get_trades(
+                self.contract, self.api_key, continuation
+            )
             trades = trade_data["trades"]
             continuation = trade_data["continuation"]
 
